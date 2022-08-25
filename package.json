@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "package": "ncc build --source-map --license licenses.txt",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "all": "npm run build && npm run package && npm test",
     "start": "node lib/main.js"
   },
