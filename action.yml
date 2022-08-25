@@ -4,8 +4,7 @@ author: 'Wes Carr wescarr@gmail.com'
 inputs:
   token:
     description: 'A GitHub access token. If publishing to a different repo you must provide a token with appropriate permissions'
-    default: ${{ secrets.GITHUB_TOKEN }}
-    required: false
+    required: true
   publish_repo:
     description: 'The repository to publish the stackaid.json file. Defaults to current repository'
     default: ${{ github.repository }}
