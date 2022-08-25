@@ -1,0 +1,29 @@
+name: 'Stackaid dependency generator'
+description: 'Generate a stackaid.json file based on your repository\'s dependency graph'
+author: 'Wes Carr wescarr@gmail.com'
+inputs:
+  token:
+    description: 'A GitHub access token. If publishing to a different repo you must provide a token with appropriate permissions'
+    default: ${{ secrets.GITHUB_TOKEN }}
+    required: false
+  publish_repo:
+    description: 'The repository to publish the stackaid.json file. Defaults to current repository'
+    default: ${{ github.repository }}
+    required: false
+  publish_path:
+    description: 'The path to publish the stackaid.json file'
+    default: ''
+    required: false
+  skip_publish:
+    description: 'If true, the stackaid.json file will not be published to the repository'
+    default: false
+    required: false
+outputs:
+  stackaid_json:
+    description: 'The generated stackaid.json file'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
+branding:
+  icon: 'layers'  
+  color: 'orange'

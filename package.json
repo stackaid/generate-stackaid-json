@@ -1,0 +1,34 @@
+{
+  "name": "stackaid-json-generator",
+  "version": "0.1.0",
+  "private": false,
+  "description": "A GitHub action to generate a stackaid.json file based on your repository's dependency graph",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "ncc build --source-map --license licenses.txt",
+    "test": "jest",
+    "all": "npm run build && npm run package && npm test",
+    "start": "node lib/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stackaid/generate-stackaid-json.git"
+  },
+  "author": "Wes Carr wescarr@gmail.com",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.9.1",
+    "@actions/github": "^5.0.3",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.184",
+    "@types/node": "^18.7.13",
+    "@vercel/ncc": "^0.34.0",
+    "jest": "^28.1.3",
+    "js-yaml": "^4.1.0",
+    "ts-jest": "^28.0.8",
+    "typescript": "^4.4.4"
+  }
+}
