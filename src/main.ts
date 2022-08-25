@@ -14,11 +14,6 @@ const run = async () => {
   const repo = process.env.GITHUB_REPOSITORY?.split('/', 2)[1] as string
   const direct = await getRepositoryDependencies(owner, repo)
 
-  core.info('Debugging inputs')
-  console.log(
-    `${core.getBooleanInput('skip_publish')} ${core.getInput('skip_publish')}`
-  )
-
   core.info(`Found ${direct.length} direct dependencies`)
 
   // We need to query each direct dependency separately since the graphql API
@@ -49,7 +44,7 @@ const run = async () => {
   core.setOutput('stackaid_json', stackAidJson)
 
   const skipPublish = core.getBooleanInput('skip_publish')
-  if (!skipPublish) {
+  if (skipPublish) {
     core.info('Skipping publish of generated stackaid.json')
     return
   }
