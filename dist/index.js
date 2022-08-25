@@ -48,6 +48,8 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const owner = process.env.GITHUB_REPOSITORY_OWNER;
     const repo = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/', 2)[1];
     const direct = yield (0, queries_1.getRepositoryDependencies)(owner, repo);
+    core.info('Debugging inputs');
+    console.log(`${core.getBooleanInput('skip_publish')} ${core.getInput('skip_publish')}`);
     core.info(`Found ${direct.length} direct dependencies`);
     // We need to query each direct dependency separately since the graphql API
     // does NOT support nested dependencies.
