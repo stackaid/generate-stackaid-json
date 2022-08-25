@@ -14,10 +14,9 @@ const run = async () => {
   const repo = process.env.GITHUB_REPOSITORY?.split('/', 2)[1] as string
   const direct = await getRepositoryDependencies(owner, repo)
 
-  core.info(
-    `Debugging inputs ${core.getBooleanInput('skip_publish')} ${core.getInput(
-      'skip_publish'
-    )}`
+  core.info('Debugging inputs')
+  console.log(
+    `${core.getBooleanInput('skip_publish')} ${core.getInput('skip_publish')}`
   )
 
   core.info(`Found ${direct.length} direct dependencies`)
