@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/generate-stackaid-json
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 This will add/update a `stackaid.json` file into your repository which will then automatically show up for funding in your StackAid dashboard.

@@ -69,7 +69,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     // Make file available to subsequent actions
     core.setOutput('stackaid_json', stackAidJson);
     const skipPublish = core.getBooleanInput('skip_publish');
-    if (!skipPublish) {
+    if (skipPublish) {
         core.info('Skipping publish of generated stackaid.json');
         return;
     }

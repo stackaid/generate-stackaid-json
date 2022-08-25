@@ -44,7 +44,7 @@ const run = async () => {
   core.setOutput('stackaid_json', stackAidJson)
 
   const skipPublish = core.getBooleanInput('skip_publish')
-  if (!skipPublish) {
+  if (skipPublish) {
     core.info('Skipping publish of generated stackaid.json')
     return
   }
