@@ -1,5 +1,5 @@
 name: 'Stackaid dependency generator'
-description: 'Generate a stackaid.json file based on your repository\'s dependency graph'
+description: "Generate a stackaid.json file based on your repository's dependency graph"
 author: 'Wes Carr wescarr@gmail.com'
 inputs:
   token:
@@ -25,5 +25,5 @@ runs:
   using: 'node16'
   main: 'dist/index.js'
 branding:
-  icon: 'layers'  
+  icon: 'layers'
   color: 'orange'
