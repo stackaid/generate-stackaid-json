@@ -264,8 +264,6 @@ const getHeadOid = (owner, repo) => __awaiter(void 0, void 0, void 0, function* 
 exports.getHeadOid = getHeadOid;
 const createCommit = (owner, repo, input) => __awaiter(void 0, void 0, void 0, function* () {
     const { name: branchName, oid } = yield (0, exports.getHeadOid)(owner, repo);
-    core.info(`Publishing commit to ${owner}/${repo} branch: ${branchName} head: ${oid}`);
-    core.info(JSON.stringify(input, null, 2));
     const result = yield (0, exports.graphql)(`
       mutation ($input: CreateCommitOnBranchInput!) {
         createCommitOnBranch(input: $input) {
