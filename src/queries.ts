@@ -181,6 +181,11 @@ export const getHeadOid = async (owner: string, repo: string) => {
 export const createCommit = async (owner: string, repo: string, input: any) => {
   const { name: branchName, oid } = await getHeadOid(owner, repo)
 
+  core.info(
+    `Publishing commit to ${owner}/${repo} branch: ${branchName} head: ${oid}`
+  )
+  core.info(JSON.stringify(input, null, 2))
+
   const result = await graphql(
     `
       mutation ($input: CreateCommitOnBranchInput!) {
