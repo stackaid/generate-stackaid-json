@@ -53,9 +53,12 @@ const run = async () => {
   const [publishOwner, publishRepo] = core
     .getInput('publish_repo')
     .split('/', 2)
-  const publishPath = core.getInput('publish_path')
 
-  const filePath = `${publishPath}/${repo}/stackaid.json`
+  let filePath = `${repo}/stackaid.json`
+  const publishPath = core.getInput('publish_path')
+  if (publishPath) {
+    filePath = `${publishPath}/${filePath}`
+  }
   const fileContents = JSON.stringify(stackAidJson, null, 2)
 
   await createCommit(publishOwner, publishRepo, {

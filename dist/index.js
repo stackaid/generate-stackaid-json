@@ -77,8 +77,11 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const [publishOwner, publishRepo] = core
         .getInput('publish_repo')
         .split('/', 2);
+    let filePath = `${repo}/stackaid.json`;
     const publishPath = core.getInput('publish_path');
-    const filePath = `${publishPath}/${repo}/stackaid.json`;
+    if (publishPath) {
+        filePath = `${publishPath}/${filePath}`;
+    }
     const fileContents = JSON.stringify(stackAidJson, null, 2);
     yield (0, queries_1.createCommit)(publishOwner, publishRepo, {
         message: {
