@@ -54,7 +54,7 @@ const run = async () => {
     .getInput('publish_repo')
     .split('/', 2)
 
-  let filePath = `${repo}/stackaid.json`
+  let filePath = `stackaid.json`
   const publishPath = core.getInput('publish_path')
   if (publishPath) {
     filePath = `${publishPath}/${filePath}`

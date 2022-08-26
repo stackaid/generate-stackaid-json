@@ -18,8 +18,6 @@ const ALLOWED_FILENAMES = [
   'go.mod',
   // Java/Scala
   'pom.xml',
-  // JavaScript
-  'package.json',
   // Python
   'pipfile',
   'pyproject.toml',

@@ -77,7 +77,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const [publishOwner, publishRepo] = core
         .getInput('publish_repo')
         .split('/', 2);
-    let filePath = `${repo}/stackaid.json`;
+    let filePath = `stackaid.json`;
     const publishPath = core.getInput('publish_path');
     if (publishPath) {
         filePath = `${publishPath}/${filePath}`;
@@ -153,8 +153,6 @@ const ALLOWED_FILENAMES = [
     'go.mod',
     // Java/Scala
     'pom.xml',
-    // JavaScript
-    'package.json',
     // Python
     'pipfile',
     'pyproject.toml',
