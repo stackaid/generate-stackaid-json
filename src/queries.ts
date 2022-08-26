@@ -18,8 +18,6 @@ const ALLOWED_FILENAMES = [
   'go.mod',
   // Java/Scala
   'pom.xml',
-  // JavaScript
-  'package.json',
   // Python
   'pipfile',
   'pyproject.toml',
@@ -180,7 +178,6 @@ export const getHeadOid = async (owner: string, repo: string) => {
 
 export const createCommit = async (owner: string, repo: string, input: any) => {
   const { name: branchName, oid } = await getHeadOid(owner, repo)
-
   const result = await graphql(
     `
       mutation ($input: CreateCommitOnBranchInput!) {
