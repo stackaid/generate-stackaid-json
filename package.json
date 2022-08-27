@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": false,
   "description": "A GitHub action to generate a stackaid.json file based on your repository's dependency graph",
-  "main": "lib/main.js",
+  "main": "lib/src/main.js",
   "scripts": {
     "build": "tsc",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest --passWithNoTests",
     "all": "npm run build && npm run package && npm test",
-    "start": "node lib/main.js",
+    "start": "node lib/src/main.js",
     "codegen": "graphql-codegen --config codegen.yml"
   },
   "repository": {

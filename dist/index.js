@@ -1,7 +1,7 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 3109:
+/***/ 9536:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -40,8 +40,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
+const queries_1 = __nccwpck_require__(6719);
 const lodash_1 = __nccwpck_require__(250);
-const queries_1 = __nccwpck_require__(775);
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const stackAidJson = { version: 1, dependencies: [] };
@@ -86,6 +86,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     yield (0, queries_1.createCommit)(publishOwner, publishRepo, {
         message: {
             headline: `Update stackaid.json dependencies for ${owner}/${repo}`,
+            body: '',
         },
         fileChanges: {
             additions: [
@@ -94,6 +95,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                     contents: Buffer.from(fileContents).toString('base64'),
                 },
             ],
+            deletions: [],
         },
     });
 });
@@ -102,7 +104,7 @@ run();
 
 /***/ }),
 
-/***/ 775:
+/***/ 6719:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -225,12 +227,9 @@ const getRepositorySummary = (owner, repo) => __awaiter(void 0, void 0, void 0, 
       ${(0, graphql_1.print)(exports.summaryFragment)}
     `, { repo, owner }));
     const { dependencyGraphManifests: { edges }, } = result.repository;
-    const relevant = [];
-    edges.forEach((edge, i) => {
-        if (ALLOWED_FILENAMES.includes(edge.node.filename.toLowerCase())) {
-            relevant.push(Object.assign(Object.assign({}, edge), { after: i > 0 ? edges[i - 1].cursor : undefined }));
-        }
-    });
+    const relevant = edges
+        .filter((edge) => ALLOWED_FILENAMES.includes(edge.node.filename.toLowerCase()))
+        .map((edge, i) => (Object.assign(Object.assign({}, edge), { after: i > 0 ? edges[i - 1].cursor : undefined })));
     return relevant;
 });
 exports.getRepositorySummary = getRepositorySummary;
@@ -282,14 +281,14 @@ const getHeadOid = (owner, repo) => __awaiter(void 0, void 0, void 0, function* 
         }
       }
     `, { owner, repo }));
-    const { name, target: { history: { nodes }, }, } = result.repository.defaultBranchRef;
-    return { name, oid: nodes[0].oid };
+    const { name, target } = result.repository.defaultBranchRef;
+    return { name, oid: target.history.nodes[0].oid };
 });
 exports.getHeadOid = getHeadOid;
 const createCommit = (owner, repo, input) => __awaiter(void 0, void 0, void 0, function* () {
     const { name: branchName, oid } = yield (0, exports.getHeadOid)(owner, repo);
-    const result = yield (0, exports.graphql)(`
-      mutation ($input: CreateCommitOnBranchInput!) {
+    const result = (yield (0, exports.graphql)(`
+      mutation createCommit($input: CreateCommitOnBranchInput!) {
         createCommitOnBranch(input: $input) {
           commit {
             url
@@ -301,8 +300,8 @@ const createCommit = (owner, repo, input) => __awaiter(void 0, void 0, void 0, f
                 repositoryNameWithOwner: `${owner}/${repo}`,
                 branchName,
             }, expectedHeadOid: oid }, input),
-    });
-    return result;
+    }));
+    return result.createCommitOnBranch;
 });
 exports.createCommit = createCommit;
 
@@ -51050,7 +51049,7 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(3109);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(9536);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()
