@@ -1,12 +1,19 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import type { GraphQlQueryResponseData } from '@octokit/graphql'
+import gql from 'graphql-tag'
 import {
-  DefaultBranchRef,
-  DependencyEdge,
-  Repository,
-  RepositorySummary,
-} from './types'
+  Commit,
+  CreateCommitMutation,
+  CreateCommitMutationVariables,
+  CreateCommitOnBranchInput,
+  GetHeadOidQuery,
+  GetHeadOidQueryVariables,
+  GetRepositoryDependenciesQuery,
+  GetRepositoryDependenciesQueryVariables,
+  GetRepositorySummaryQuery,
+  GetRepositorySummaryQueryVariables,
+} from '../types/graphql'
+import { print } from 'graphql'
 import { uniqBy } from 'lodash'
 
 const ALLOWED_FILENAMES = [
@@ -27,8 +34,8 @@ const ALLOWED_FILENAMES = [
   'gemfile',
 ]
 
-export const summaryFragment = `
-  dependencyGraphManifests (dependenciesFirst: 1, withDependencies: true) {
+export const summaryFragment = gql(`
+  fragment summaryFragment on DependencyGraphManifestConnection {
     edges	{
       cursor
       node {
@@ -37,10 +44,10 @@ export const summaryFragment = `
       }
     }
   }
-`
+`)
 
-export const repositoryFragment = `
-  dependencyGraphManifests (dependenciesFirst: 1, withDependencies: true, first: $first, after: $after) {
+export const repositoryFragment = gql(`
+  fragment repositoryFragment on DependencyGraphManifestConnection {
     nodes {
       filename
       dependencies {
@@ -60,7 +67,7 @@ export const repositoryFragment = `
       }
     }
   }
-`
+`)
 
 export const graphql = async (
   query: string,
@@ -82,30 +89,35 @@ export const graphql = async (
 }
 
 export const getRepositorySummary = async (owner: string, repo: string) => {
-  const result: GraphQlQueryResponseData = await graphql(
+  const result = (await graphql(
     `
-    query getDependencyGraph($owner: String!, $repo: String!){
-      repository(owner:$owner, name:$repo) {
-        ${summaryFragment}
+      query getRepositorySummary($owner: String!, $repo: String!) {
+        repository(owner: $owner, name: $repo) {
+          dependencyGraphManifests(
+            dependenciesFirst: 1
+            withDependencies: true
+          ) {
+            ...summaryFragment
+          }
+        }
       }
-    }
+      ${print(summaryFragment)}
     `,
-    { repo, owner }
-  )
+    { repo, owner } as GetRepositorySummaryQueryVariables
+  )) as GetRepositorySummaryQuery
 
   const {
     dependencyGraphManifests: { edges },
-  } = result.repository as RepositorySummary
+  } = result.repository
 
-  const relevant: DependencyEdge[] = []
-  edges.forEach((edge, i) => {
-    if (ALLOWED_FILENAMES.includes(edge.node.filename.toLowerCase())) {
-      relevant.push({
-        ...edge,
-        after: i > 0 ? edges[i - 1].cursor : undefined,
-      })
-    }
-  })
+  const relevant = edges
+    .filter((edge) =>
+      ALLOWED_FILENAMES.includes(edge.node.filename.toLowerCase())
+    )
+    .map((edge, i) => ({
+      ...edge,
+      after: i > 0 ? edges[i - 1].cursor : undefined,
+    }))
 
   return relevant
 }
@@ -116,20 +128,33 @@ export const getRepositoryDependencies = async (
   first?: number,
   after?: string
 ) => {
-  const result: GraphQlQueryResponseData = await graphql(
+  const result = (await graphql(
     `
-    query getDependencyGraph($owner: String!, $repo: String!, $first: Int, $after: String) {
-      repository(owner:$owner, name:$repo) {
-        ${repositoryFragment}
+      query getRepositoryDependencies(
+        $owner: String!
+        $repo: String!
+        $first: Int
+        $after: String
+      ) {
+        repository(owner: $owner, name: $repo) {
+          dependencyGraphManifests(
+            dependenciesFirst: 1
+            withDependencies: true
+            first: $first
+            after: $after
+          ) {
+            ...repositoryFragment
+          }
+        }
       }
-    }
+      ${print(repositoryFragment)}
     `,
-    { repo, owner, first, after }
-  )
+    { repo, owner, first, after } as GetRepositoryDependenciesQueryVariables
+  )) as GetRepositoryDependenciesQuery
 
   const {
     dependencyGraphManifests: { nodes },
-  } = result.repository as Repository
+  } = result.repository
 
   const dependencies = uniqBy(
     nodes
@@ -143,7 +168,7 @@ export const getRepositoryDependencies = async (
 }
 
 export const getHeadOid = async (owner: string, repo: string) => {
-  const result = await graphql(
+  const result = (await graphql(
     `
       query getHeadOid($owner: String!, $repo: String!) {
         repository(owner: $owner, name: $repo) {
@@ -162,25 +187,22 @@ export const getHeadOid = async (owner: string, repo: string) => {
         }
       }
     `,
-    { owner, repo }
-  )
-  const {
-    defaultBranchRef: {
-      name,
-      target: {
-        history: { nodes },
-      },
-    },
-  } = result.repository as DefaultBranchRef
+    { owner, repo } as GetHeadOidQueryVariables
+  )) as GetHeadOidQuery
 
-  return { name, oid: nodes[0].oid }
+  const { name, target } = result.repository.defaultBranchRef
+  return { name, oid: (target as Commit).history.nodes[0].oid }
 }
 
-export const createCommit = async (owner: string, repo: string, input: any) => {
+export const createCommit = async (
+  owner: string,
+  repo: string,
+  input: Partial<CreateCommitOnBranchInput>
+) => {
   const { name: branchName, oid } = await getHeadOid(owner, repo)
-  const result = await graphql(
+  const result = (await graphql(
     `
-      mutation ($input: CreateCommitOnBranchInput!) {
+      mutation createCommit($input: CreateCommitOnBranchInput!) {
         createCommitOnBranch(input: $input) {
           commit {
             url
@@ -197,8 +219,8 @@ export const createCommit = async (owner: string, repo: string, input: any) => {
         expectedHeadOid: oid,
         ...input,
       },
-    }
-  )
+    } as CreateCommitMutationVariables
+  )) as CreateCommitMutation
 
-  return result
+  return result.createCommitOnBranch
 }
