@@ -1,0 +1,13 @@
+overwrite: true
+schema: 'src/generated/schema.graphql'
+generates:
+  types/graphql.ts:
+    documents:
+      - 'src/**/*.ts'
+    config:
+      skipTypename: true
+      avoidOptionals: true
+      maybeValue: T
+    plugins:
+      - 'typescript'
+      - 'typescript-operations'

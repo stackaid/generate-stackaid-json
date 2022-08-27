@@ -1,11 +1,10 @@
 import * as core from '@actions/core'
-import { uniqBy } from 'lodash'
 import {
   createCommit,
   getRepositoryDependencies,
   getRepositorySummary,
 } from './queries'
-import { StackAidDependency, StackAidJson } from './types'
+import { uniqBy } from 'lodash'
 
 const run = async () => {
   const stackAidJson: StackAidJson = { version: 1, dependencies: [] }
@@ -64,6 +63,7 @@ const run = async () => {
   await createCommit(publishOwner, publishRepo, {
     message: {
       headline: `Update stackaid.json dependencies for ${owner}/${repo}`,
+      body: '',
     },
     fileChanges: {
       additions: [
@@ -72,6 +72,7 @@ const run = async () => {
           contents: Buffer.from(fileContents).toString('base64'),
         },
       ],
+      deletions: [],
     },
   })
 }
