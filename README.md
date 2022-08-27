@@ -30,8 +30,8 @@ The action also supports a few useful `inputs` and `outputs` so you can publish 
 
 ### Inputs
 
-- `publish_owner`: The name of the organization/account to publish the generated stackaid.json file.
-- `publish_repo`: Then name of the repository to publish to.
+- `token`: An access token which has repo permissions. You can use the `${{ secrets.GITHUB_TOKEN }}` automatically provided by the action runner if publishing to the same repository.
+- `publish_repo`: The full name of the repository, (eg: `username/repo-name`) to publish the generated stackaid.json file. Defaults to the current repository.
 - `publish_path`: The path to publish to. By default the stackaid.json file is published to the root of the repository.
 - `skip_publish`: Set to `true` if you do not want to publish the generated file.
 
