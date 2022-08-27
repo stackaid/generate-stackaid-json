@@ -14,12 +14,11 @@ on:
   push:
     branches:
       - main
-
 jobs:
   stackaid-json:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/generate-stackaid-json
+      - uses: stackaid/generate-stackaid-json@v0.1.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
