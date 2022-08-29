@@ -47,6 +47,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const stackAidJson = { version: 1, dependencies: [] };
     const owner = process.env.GITHUB_REPOSITORY_OWNER;
     const repo = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/', 2)[1];
+    // TODO(wes): Do not limit file paths for current repository.
     const direct = yield (0, queries_1.getRepositoryDependencies)(owner, repo);
     core.info(`Found ${direct.length} direct dependencies`);
     // We need to query each direct dependency separately since the graphql API
@@ -208,25 +209,44 @@ const graphql = (query, variables) => __awaiter(void 0, void 0, void 0, function
             // Required for dependency graph queries, see:
             // https://docs.github.com/en/graphql/overview/schema-previews#access-to-a-repositories-dependency-graph-preview
             Accept: 'application/vnd.github.hawkgirl-preview+json',
-        } }));
+        }, request: { timeout: 60 * 1000 } }));
     return result;
 });
 exports.graphql = graphql;
-const getRepositorySummary = (owner, repo) => __awaiter(void 0, void 0, void 0, function* () {
+const getRepositorySummaryPage = (owner, repo, cursor = '') => __awaiter(void 0, void 0, void 0, function* () {
     const result = (yield (0, exports.graphql)(`
-      query getRepositorySummary($owner: String!, $repo: String!) {
+      query getRepositorySummary(
+        $owner: String!
+        $repo: String!
+        $cursor: String
+      ) {
         repository(owner: $owner, name: $repo) {
           dependencyGraphManifests(
             dependenciesFirst: 1
             withDependencies: true
+            first: 100
+            after: $cursor
           ) {
             ...summaryFragment
           }
         }
       }
       ${(0, graphql_1.print)(exports.summaryFragment)}
-    `, { repo, owner }));
+    `, { repo, owner, cursor }));
     const { dependencyGraphManifests: { edges }, } = result.repository;
+    return edges;
+});
+const getRepositorySummary = (owner, repo) => __awaiter(void 0, void 0, void 0, function* () {
+    let edges = yield getRepositorySummaryPage(owner, repo);
+    if (!edges.length) {
+        return [];
+    }
+    let { cursor } = edges[edges.length - 1];
+    while (cursor) {
+        edges = [...edges, ...(yield getRepositorySummaryPage(owner, repo, cursor))];
+        const next = edges[edges.length - 1].cursor;
+        cursor = next !== cursor ? next : '';
+    }
     const relevant = edges
         .filter((edge) => ALLOWED_FILENAMES.includes(edge.node.filename.toLowerCase()))
         .map((edge, i) => (Object.assign(Object.assign({}, edge), { after: i > 0 ? edges[i - 1].cursor : undefined })));

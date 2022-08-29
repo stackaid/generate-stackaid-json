@@ -83,19 +83,30 @@ export const graphql = async (
       // https://docs.github.com/en/graphql/overview/schema-previews#access-to-a-repositories-dependency-graph-preview
       Accept: 'application/vnd.github.hawkgirl-preview+json',
     },
+    request: { timeout: 60 * 1000 },
   })
 
   return result as any
 }
 
-export const getRepositorySummary = async (owner: string, repo: string) => {
+const getRepositorySummaryPage = async (
+  owner: string,
+  repo: string,
+  cursor: string = ''
+) => {
   const result = (await graphql(
     `
-      query getRepositorySummary($owner: String!, $repo: String!) {
+      query getRepositorySummary(
+        $owner: String!
+        $repo: String!
+        $cursor: String
+      ) {
         repository(owner: $owner, name: $repo) {
           dependencyGraphManifests(
             dependenciesFirst: 1
             withDependencies: true
+            first: 100
+            after: $cursor
           ) {
             ...summaryFragment
           }
@@ -103,12 +114,28 @@ export const getRepositorySummary = async (owner: string, repo: string) => {
       }
       ${print(summaryFragment)}
     `,
-    { repo, owner } as GetRepositorySummaryQueryVariables
+    { repo, owner, cursor } as GetRepositorySummaryQueryVariables
   )) as GetRepositorySummaryQuery
 
   const {
     dependencyGraphManifests: { edges },
   } = result.repository
+
+  return edges
+}
+
+export const getRepositorySummary = async (owner: string, repo: string) => {
+  let edges = await getRepositorySummaryPage(owner, repo)
+  if (!edges.length) {
+    return []
+  }
+
+  let { cursor } = edges[edges.length - 1]
+  while (cursor) {
+    edges = [...edges, ...(await getRepositorySummaryPage(owner, repo, cursor))]
+    const next = edges[edges.length - 1].cursor
+    cursor = next !== cursor ? next : ''
+  }
 
   const relevant = edges
     .filter((edge) =>
