@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
-      - name: generate
+      - id: generate
         uses: ./
         with:
           skip_publish: true
