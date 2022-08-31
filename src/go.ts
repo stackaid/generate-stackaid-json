@@ -28,7 +28,7 @@ export const ensureModules = (cwd: string) => {
 }
 
 export const downloadModules = (modules: GoModule[]) => {
-  modules.forEach((m) => execSync(`go mod download ${m.Path}`))
+  modules.forEach((m) => execSync(`go mod download ${m.Path}@latest`))
 }
 
 export const getDependencies = (dir: string = process.cwd()) => {
