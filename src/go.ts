@@ -1,24 +1,38 @@
 import { execSync } from 'child_process'
 
 export const listModules = (cwd: string) => {
-  console.log('listModules', cwd)
-  // List direct dependency modules
   const output = execSync(
     'go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `"}` }}{{end}}\' all',
     { cwd }
   ).toString()
 
-  console.log('output', output)
-
-  const modules = output
+  const modules: GoModule[] = output
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line))
-  return modules as { Path: string; Dir: string }[]
+
+  return modules
+}
+
+export const ensureModules = (cwd: string) => {
+  // List direct dependency modules
+  let modules = listModules(cwd)
+
+  // Download modules for each dependency missing a Dir
+  downloadModules(modules.filter((m) => !m.Dir))
+
+  // Get dependency info again
+  modules = listModules(cwd)
+
+  return modules
+}
+
+export const downloadModules = (modules: GoModule[]) => {
+  modules.forEach((m) => execSync(`go mod download ${m.Path}`))
 }
 
 export const getDependencies = (dir: string = process.cwd()) => {
-  const modules = listModules(dir)
+  const modules = ensureModules(dir)
   const dependencies = modules.map((m) => {
     const { Path: source, Dir: dir } = m
     const dependencies = dir

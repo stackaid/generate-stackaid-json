@@ -34,13 +34,10 @@ exports.DEPENDENCY_FILE_TYPES = [
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDependencies = exports.listModules = void 0;
+exports.getDependencies = exports.downloadModules = exports.ensureModules = exports.listModules = void 0;
 const child_process_1 = __nccwpck_require__(2081);
 const listModules = (cwd) => {
-    console.log('listModules', cwd);
-    // List direct dependency modules
     const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `"}` }}{{end}}\' all', { cwd }).toString();
-    console.log('output', output);
     const modules = output
         .split('\n')
         .filter(Boolean)
@@ -48,8 +45,22 @@ const listModules = (cwd) => {
     return modules;
 };
 exports.listModules = listModules;
+const ensureModules = (cwd) => {
+    // List direct dependency modules
+    let modules = (0, exports.listModules)(cwd);
+    // Download modules for each dependency missing a Dir
+    (0, exports.downloadModules)(modules.filter((m) => !m.Dir));
+    // Get dependency info again
+    modules = (0, exports.listModules)(cwd);
+    return modules;
+};
+exports.ensureModules = ensureModules;
+const downloadModules = (modules) => {
+    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}`));
+};
+exports.downloadModules = downloadModules;
 const getDependencies = (dir = process.cwd()) => {
-    const modules = (0, exports.listModules)(dir);
+    const modules = (0, exports.ensureModules)(dir);
     const dependencies = modules.map((m) => {
         const { Path: source, Dir: dir } = m;
         const dependencies = dir
@@ -131,7 +142,6 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                 break;
         }
     }
-    core.info(`Found ${direct.length} direct dependencies`);
     // We need to query each direct dependency separately since the graphql API
     // does NOT support nested dependencies.
     for (const dep of direct) {

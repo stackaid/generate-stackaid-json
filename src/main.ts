@@ -33,8 +33,6 @@ const run = async () => {
     }
   }
 
-  core.info(`Found ${direct.length} direct dependencies`)
-
   // We need to query each direct dependency separately since the graphql API
   // does NOT support nested dependencies.
   for (const dep of direct) {

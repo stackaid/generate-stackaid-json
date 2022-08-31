@@ -7,3 +7,8 @@ interface StackAidJson {
   version: number
   dependencies: StackAidDependency[]
 }
+
+interface GoModule {
+  Path: string
+  Dir: string
+}
