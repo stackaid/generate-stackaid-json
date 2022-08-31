@@ -1,17 +1,37 @@
 import * as core from '@actions/core'
+import path from 'path'
+import { FileTypes } from './constants'
 import {
   createCommit,
   getRepositoryDependencies,
   getRepositorySummary,
 } from './queries'
+import { getDependencies } from './go'
+import { matches } from './utils'
 import { uniqBy } from 'lodash'
 
 const run = async () => {
-  const stackAidJson: StackAidJson = { version: 1, dependencies: [] }
-
   const owner = process.env.GITHUB_REPOSITORY_OWNER as string
   const repo = process.env.GITHUB_REPOSITORY?.split('/', 2)[1] as string
-  const direct = await getRepositoryDependencies(owner, repo)
+
+  const stackAidJson: StackAidJson = { version: 1, dependencies: [] }
+  const direct = []
+
+  const glob = '**/'
+  const summary = await getRepositorySummary(owner, repo, glob)
+  for (const { after, node } of summary) {
+    switch (true) {
+      case matches(node.filename, FileTypes.go, glob):
+        core.info(`Found ${node.filename}, getting Go dependencies`)
+        stackAidJson.dependencies.push(
+          ...getDependencies(path.dirname(node.filename))
+        )
+        break
+      default:
+        direct.push(...(await getRepositoryDependencies(owner, repo, 1, after)))
+        break
+    }
+  }
 
   core.info(`Found ${direct.length} direct dependencies`)
 
@@ -23,16 +43,17 @@ const run = async () => {
       name,
       owner: { login: owner },
     } = dep.repository
-    // First get summmary to filter to relevant files
     const summary = await getRepositorySummary(owner, name)
     core.info(`${owner}/${name}: ${summary.map((s) => s.node.filename)}`)
 
-    const indirect: StackAidDependency[] = []
+    let indirect: StackAidDependency[] = []
     for (const { after } of summary) {
       const deps = await getRepositoryDependencies(owner, name, 1, after)
       indirect.push(...deps.map((d) => ({ source: d.repository.url })))
     }
 
+    // Dependencies shouldn't be funding themselves.
+    indirect = indirect.filter((d) => d.source !== source)
     stackAidJson.dependencies.push({
       source,
       dependencies: uniqBy(indirect, 'source'),

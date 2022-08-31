@@ -18,7 +18,9 @@ jobs:
   stackaid-json:
     runs-on: ubuntu-latest
     steps:
-      - uses: stackaid/generate-stackaid-json@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+      - uses: stackaid/generate-stackaid-json@v1.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
