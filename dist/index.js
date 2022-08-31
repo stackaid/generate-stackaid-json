@@ -37,7 +37,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDependencies = exports.downloadModules = exports.ensureModules = exports.listModules = void 0;
 const child_process_1 = __nccwpck_require__(2081);
 const listModules = (cwd) => {
-    const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `"}` }}{{end}}\' all', { cwd }).toString();
+    const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all', { cwd }).toString();
     const modules = output
         .split('\n')
         .filter(Boolean)
@@ -56,7 +56,7 @@ const ensureModules = (cwd) => {
 };
 exports.ensureModules = ensureModules;
 const downloadModules = (modules) => {
-    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@latest`));
+    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@${m.Version}`));
 };
 exports.downloadModules = downloadModules;
 const getDependencies = (dir = process.cwd()) => {

@@ -11,4 +11,5 @@ interface StackAidJson {
 interface GoModule {
   Path: string
   Dir: string
+  Version: string
 }

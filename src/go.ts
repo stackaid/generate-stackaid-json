@@ -2,7 +2,7 @@ import { execSync } from 'child_process'
 
 export const listModules = (cwd: string) => {
   const output = execSync(
-    'go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `"}` }}{{end}}\' all',
+    'go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all',
     { cwd }
   ).toString()
 
@@ -28,7 +28,7 @@ export const ensureModules = (cwd: string) => {
 }
 
 export const downloadModules = (modules: GoModule[]) => {
-  modules.forEach((m) => execSync(`go mod download ${m.Path}@latest`))
+  modules.forEach((m) => execSync(`go mod download ${m.Path}@${m.Version}`))
 }
 
 export const getDependencies = (dir: string = process.cwd()) => {
