@@ -49,14 +49,14 @@ const ensureModules = (cwd) => {
     // List direct dependency modules
     let modules = (0, exports.listModules)(cwd);
     // Download modules for each dependency missing a Dir
-    (0, exports.downloadModules)(modules.filter((m) => !m.Dir));
+    (0, exports.downloadModules)(modules.filter((m) => !m.Dir), cwd);
     // Get dependency info again
     modules = (0, exports.listModules)(cwd);
     return modules;
 };
 exports.ensureModules = ensureModules;
-const downloadModules = (modules) => {
-    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@${m.Version}`));
+const downloadModules = (modules, cwd) => {
+    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@${m.Version}`, { cwd }));
 };
 exports.downloadModules = downloadModules;
 const getDependencies = (dir = process.cwd()) => {

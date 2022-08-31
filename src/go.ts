@@ -19,7 +19,10 @@ export const ensureModules = (cwd: string) => {
   let modules = listModules(cwd)
 
   // Download modules for each dependency missing a Dir
-  downloadModules(modules.filter((m) => !m.Dir))
+  downloadModules(
+    modules.filter((m) => !m.Dir),
+    cwd
+  )
 
   // Get dependency info again
   modules = listModules(cwd)
@@ -27,8 +30,10 @@ export const ensureModules = (cwd: string) => {
   return modules
 }
 
-export const downloadModules = (modules: GoModule[]) => {
-  modules.forEach((m) => execSync(`go mod download ${m.Path}@${m.Version}`))
+export const downloadModules = (modules: GoModule[], cwd: string) => {
+  modules.forEach((m) =>
+    execSync(`go mod download ${m.Path}@${m.Version}`, { cwd })
+  )
 }
 
 export const getDependencies = (dir: string = process.cwd()) => {
