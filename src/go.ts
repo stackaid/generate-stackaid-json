@@ -8,6 +8,8 @@ export const listModules = (cwd: string) => {
     { cwd }
   ).toString()
 
+  console.log('output', output)
+
   const modules = output
     .split('\n')
     .filter(Boolean)

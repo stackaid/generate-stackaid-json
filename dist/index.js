@@ -40,6 +40,7 @@ const listModules = (cwd) => {
     console.log('listModules', cwd);
     // List direct dependency modules
     const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `"}` }}{{end}}\' all', { cwd }).toString();
+    console.log('output', output);
     const modules = output
         .split('\n')
         .filter(Boolean)
