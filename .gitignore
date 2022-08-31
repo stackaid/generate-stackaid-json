@@ -106,4 +106,7 @@ typings/
 # Ignore ts built files
 lib
 
+# MacOS
+.DS_Store
+
 schema.graphql
