@@ -1,3 +1,5 @@
+[![build-test](https://github.com/stackaid/generate-stackaid-json/actions/workflows/test.yml/badge.svg)](https://github.com/stackaid/generate-stackaid-json/actions/workflows/test.yml)
+
 # generate-stackaid-json
 
 A GitHub action to generate a stackaid.json file based on your repository's dependency graph
