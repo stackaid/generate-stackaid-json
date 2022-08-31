@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
-      - uses: stackaid/generate-stackaid-json@v1.1
+      - uses: stackaid/generate-stackaid-json@v1.2
 ```
 
 This will commit a `stackaid.json` file in your repository which will then automatically show up for funding in the StackAid dashboard.
@@ -31,7 +31,7 @@ The action also supports a few useful `inputs` and `outputs` so you can publish 
 
 ### Inputs
 
-- `token`: An access token which has repo permissions. You can use the `${{ secrets.GITHUB_TOKEN }}` automatically provided by the action runner if publishing to the same repository.
+- `token`: An access token which has repo permissions. By default the action uses `${{ github.token }}` automatically provided by the action runner.
 - `publish_repo`: The full name of the repository, (eg: `username/repo-name`) to publish the generated stackaid.json file. Defaults to the current repository.
 - `publish_path`: The path to publish to. By default the stackaid.json file is published to the root of the repository.
 - `skip_publish`: Set to `true` if you do not want to publish the generated file.
