@@ -56,7 +56,7 @@ const ensureModules = (cwd) => {
 };
 exports.ensureModules = ensureModules;
 const downloadModules = (modules) => {
-    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}`));
+    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@latest`));
 };
 exports.downloadModules = downloadModules;
 const getDependencies = (dir = process.cwd()) => {
