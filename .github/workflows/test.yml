@@ -16,10 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
-      - name: generate 
+      - name: generate
         uses: ./
-          with:
-            skip_publish: true
+        with:
+          skip_publish: true
       - run: echo $STACKAID_JSON
         env:
           STACKAID_JSON: ${{ steps.generate.outputs.stackaid_json}}
