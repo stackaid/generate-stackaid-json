@@ -37,6 +37,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDependencies = exports.listModules = void 0;
 const child_process_1 = __nccwpck_require__(2081);
 const listModules = (cwd) => {
+    console.log('listModules', cwd);
     // List direct dependency modules
     const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `"}` }}{{end}}\' all', { cwd }).toString();
     const modules = output
@@ -49,9 +50,9 @@ exports.listModules = listModules;
 const getDependencies = (dir = process.cwd()) => {
     const modules = (0, exports.listModules)(dir);
     const dependencies = modules.map((m) => {
-        const { Path: source, Dir: cwd } = m;
-        const dependencies = cwd
-            ? (0, exports.listModules)(cwd).map((m) => ({ source: m.Path }))
+        const { Path: source, Dir: dir } = m;
+        const dependencies = dir
+            ? (0, exports.listModules)(dir).map((m) => ({ source: m.Path }))
             : [];
         return { source, dependencies };
     });
