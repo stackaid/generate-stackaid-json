@@ -6,6 +6,12 @@ const sourceDir = core.getInput('src_dir') || process.cwd()
 
 const resolveDir = (dir: string) => path.resolve(sourceDir, dir)
 
+export const listDir = (dir: string) => {
+  core.info(`listDir ${resolveDir(dir)}`)
+  const output = execSync('ls -lah', { cwd: resolveDir(dir) }).toString()
+  return output
+}
+
 export const listModules = (dir: string) => {
   const output = execSync(
     'go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all',
@@ -21,6 +27,8 @@ export const listModules = (dir: string) => {
 }
 
 export const ensureModules = (dir: string) => {
+  core.info('ensureModules')
+  core.info(listDir(dir))
   // List direct dependency modules
   let modules = listModules(dir)
 

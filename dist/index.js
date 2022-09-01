@@ -60,12 +60,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDependencies = exports.downloadModules = exports.ensureModules = exports.listModules = void 0;
+exports.getDependencies = exports.downloadModules = exports.ensureModules = exports.listModules = exports.listDir = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const child_process_1 = __nccwpck_require__(2081);
 const sourceDir = core.getInput('src_dir') || process.cwd();
 const resolveDir = (dir) => path_1.default.resolve(sourceDir, dir);
+const listDir = (dir) => {
+    core.info(`listDir ${resolveDir(dir)}`);
+    const output = (0, child_process_1.execSync)('ls -lah', { cwd: resolveDir(dir) }).toString();
+    return output;
+};
+exports.listDir = listDir;
 const listModules = (dir) => {
     const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all', { cwd: resolveDir(dir) }).toString();
     const modules = output
@@ -76,6 +82,8 @@ const listModules = (dir) => {
 };
 exports.listModules = listModules;
 const ensureModules = (dir) => {
+    core.info('ensureModules');
+    core.info((0, exports.listDir)(dir));
     // List direct dependency modules
     let modules = (0, exports.listModules)(dir);
     // Download modules for each dependency missing a Dir
