@@ -17,6 +17,10 @@ inputs:
     description: 'If true, the stackaid.json file will not be published to the repository'
     default: false
     required: false
+  src_dir:
+    description: 'Source code root directory'
+    default: ${{ github.workspace }}
+    required: false
 outputs:
   stackaid_json:
     description: 'The generated stackaid.json file'

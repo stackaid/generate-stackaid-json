@@ -29,15 +29,45 @@ exports.DEPENDENCY_FILE_TYPES = [
 /***/ }),
 
 /***/ 9783:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDependencies = exports.downloadModules = exports.ensureModules = exports.listModules = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const path_1 = __importDefault(__nccwpck_require__(1017));
 const child_process_1 = __nccwpck_require__(2081);
-const listModules = (cwd) => {
-    const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all', { cwd }).toString();
+const sourceDir = core.getInput('src_dir') || process.cwd();
+const resolveDir = (dir) => path_1.default.resolve(sourceDir, dir);
+const listModules = (dir) => {
+    const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all', { cwd: resolveDir(dir) }).toString();
     const modules = output
         .split('\n')
         .filter(Boolean)
@@ -45,21 +75,21 @@ const listModules = (cwd) => {
     return modules;
 };
 exports.listModules = listModules;
-const ensureModules = (cwd) => {
+const ensureModules = (dir) => {
     // List direct dependency modules
-    let modules = (0, exports.listModules)(cwd);
+    let modules = (0, exports.listModules)(dir);
     // Download modules for each dependency missing a Dir
-    (0, exports.downloadModules)(modules.filter((m) => !m.Dir), cwd);
+    (0, exports.downloadModules)(modules.filter((m) => !m.Dir), dir);
     // Get dependency info again
-    modules = (0, exports.listModules)(cwd);
+    modules = (0, exports.listModules)(dir);
     return modules;
 };
 exports.ensureModules = ensureModules;
-const downloadModules = (modules, cwd) => {
-    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@${m.Version}`, { cwd }));
+const downloadModules = (modules, dir) => {
+    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@${m.Version}`, { cwd: resolveDir(dir) }));
 };
 exports.downloadModules = downloadModules;
-const getDependencies = (dir = process.cwd()) => {
+const getDependencies = (dir = '') => {
     const modules = (0, exports.ensureModules)(dir);
     const dependencies = modules.map((m) => {
         const { Path: source, Dir: dir } = m;

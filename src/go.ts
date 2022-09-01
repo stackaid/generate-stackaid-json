@@ -1,9 +1,15 @@
+import * as core from '@actions/core'
+import path from 'path'
 import { execSync } from 'child_process'
 
-export const listModules = (cwd: string) => {
+const sourceDir = core.getInput('src_dir') || process.cwd()
+
+const resolveDir = (dir: string) => path.resolve(sourceDir, dir)
+
+export const listModules = (dir: string) => {
   const output = execSync(
     'go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all',
-    { cwd }
+    { cwd: resolveDir(dir) }
   ).toString()
 
   const modules: GoModule[] = output
@@ -14,29 +20,29 @@ export const listModules = (cwd: string) => {
   return modules
 }
 
-export const ensureModules = (cwd: string) => {
+export const ensureModules = (dir: string) => {
   // List direct dependency modules
-  let modules = listModules(cwd)
+  let modules = listModules(dir)
 
   // Download modules for each dependency missing a Dir
   downloadModules(
     modules.filter((m) => !m.Dir),
-    cwd
+    dir
   )
 
   // Get dependency info again
-  modules = listModules(cwd)
+  modules = listModules(dir)
 
   return modules
 }
 
-export const downloadModules = (modules: GoModule[], cwd: string) => {
+export const downloadModules = (modules: GoModule[], dir: string) => {
   modules.forEach((m) =>
-    execSync(`go mod download ${m.Path}@${m.Version}`, { cwd })
+    execSync(`go mod download ${m.Path}@${m.Version}`, { cwd: resolveDir(dir) })
   )
 }
 
-export const getDependencies = (dir: string = process.cwd()) => {
+export const getDependencies = (dir: string = '') => {
   const modules = ensureModules(dir)
   const dependencies = modules.map((m) => {
     const { Path: source, Dir: dir } = m
