@@ -2,6 +2,8 @@ import * as core from '@actions/core'
 import path from 'path'
 import { execSync } from 'child_process'
 
+const GITHUB_DOMAIN = 'github.com'
+
 const sourceDir = core.getInput('src_dir') || process.cwd()
 
 const resolveDir = (dir: string) => path.resolve(sourceDir, dir)
@@ -10,6 +12,17 @@ export const listDir = (dir: string) => {
   core.info(`listDir ${resolveDir(dir)}`)
   const output = execSync('ls -lah', { cwd: resolveDir(dir) }).toString()
   return output
+}
+
+export const listDeps = (dir: string, module: string = '') => {
+  let output = execSync(`go list -f {{.Deps}} ${module}`, {
+    cwd: resolveDir(dir),
+  }).toString()
+  // trim `[]` at start and end of string
+  output = output.slice(1, -1)
+
+  const deps = output.split(/\s+/).filter((d) => d.startsWith(GITHUB_DOMAIN))
+  return deps
 }
 
 export const listModules = (dir: string) => {
@@ -30,7 +43,6 @@ export const listModules = (dir: string) => {
 
 export const ensureModules = (dir: string) => {
   core.info('ensureModules')
-  core.info(listDir(dir))
   // List direct dependency modules
   let modules = listModules(dir)
 
@@ -53,15 +65,11 @@ export const downloadModules = (modules: GoModule[], dir: string) => {
 }
 
 export const getDependencies = (dir: string = '') => {
-  const modules = ensureModules(dir)
-  const dependencies = modules.map((m) => {
-    const { Path: source, Dir: dir } = m
-    const dependencies = dir
-      ? listModules(dir).map((m) => ({ source: m.Path }))
-      : []
-
-    return { source, dependencies }
-  })
+  const direct = listDeps(dir)
+  const dependencies = direct.map((source) => ({
+    source,
+    dependencies: listDeps(dir, source).map((source) => ({ source })),
+  }))
 
   return dependencies as StackAidDependency[]
 }
