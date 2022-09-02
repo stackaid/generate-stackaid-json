@@ -13,6 +13,8 @@ export const listDir = (dir: string) => {
 }
 
 export const listModules = (dir: string) => {
+  core.info(`listModules ${resolveDir(dir)}`)
+
   const output = execSync(
     'go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all',
     { cwd: resolveDir(dir) }

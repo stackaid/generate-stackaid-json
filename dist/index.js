@@ -73,6 +73,7 @@ const listDir = (dir) => {
 };
 exports.listDir = listDir;
 const listModules = (dir) => {
+    core.info(`listModules ${resolveDir(dir)}`);
     const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all', { cwd: resolveDir(dir) }).toString();
     const modules = output
         .split('\n')
