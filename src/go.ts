@@ -8,11 +8,7 @@ const sourceDir = core.getInput('src_dir') || process.cwd()
 
 const resolveDir = (dir: string) => path.resolve(sourceDir, dir)
 
-export const listDir = (dir: string) => {
-  core.info(`listDir ${resolveDir(dir)}`)
-  const output = execSync('ls -lah', { cwd: resolveDir(dir) }).toString()
-  return output
-}
+const filterDependency = (line: string) => line.startsWith(GITHUB_DOMAIN)
 
 const parseDependency = (line: string) => {
   switch (true) {
@@ -31,14 +27,14 @@ export const listDeps = (dir: string, module: string = '') => {
   // trim `[]` at start and end of string
   output = output.slice(1, -1)
 
-  return output.split(/\s+/).map(parseDependency).filter(Boolean)
+  return output.split(/\s+/).filter(filterDependency)
 }
 
 export const getDependencies = (dir: string = '') => {
   const direct = listDeps(dir)
-  const dependencies = direct.map((source) => ({
-    source,
-    dependencies: listDeps(dir, source).map((source) => ({ source })),
+  const dependencies = direct.map((d) => ({
+    source: parseDependency(d),
+    dependencies: listDeps(dir, d).map((d) => ({ source: parseDependency(d) })),
   }))
 
   return dependencies as StackAidDependency[]

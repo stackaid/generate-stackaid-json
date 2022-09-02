@@ -60,19 +60,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDependencies = exports.listDeps = exports.listDir = void 0;
+exports.getDependencies = exports.listDeps = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const child_process_1 = __nccwpck_require__(2081);
 const GITHUB_DOMAIN = 'github.com';
 const sourceDir = core.getInput('src_dir') || process.cwd();
 const resolveDir = (dir) => path_1.default.resolve(sourceDir, dir);
-const listDir = (dir) => {
-    core.info(`listDir ${resolveDir(dir)}`);
-    const output = (0, child_process_1.execSync)('ls -lah', { cwd: resolveDir(dir) }).toString();
-    return output;
-};
-exports.listDir = listDir;
+const filterDependency = (line) => line.startsWith(GITHUB_DOMAIN);
 const parseDependency = (line) => {
     switch (true) {
         case line.startsWith(GITHUB_DOMAIN):
@@ -88,14 +83,14 @@ const listDeps = (dir, module = '') => {
     }).toString();
     // trim `[]` at start and end of string
     output = output.slice(1, -1);
-    return output.split(/\s+/).map(parseDependency).filter(Boolean);
+    return output.split(/\s+/).filter(filterDependency);
 };
 exports.listDeps = listDeps;
 const getDependencies = (dir = '') => {
     const direct = (0, exports.listDeps)(dir);
-    const dependencies = direct.map((source) => ({
-        source,
-        dependencies: (0, exports.listDeps)(dir, source).map((source) => ({ source })),
+    const dependencies = direct.map((d) => ({
+        source: parseDependency(d),
+        dependencies: (0, exports.listDeps)(dir, d).map((d) => ({ source: parseDependency(d) })),
     }));
     return dependencies;
 };
