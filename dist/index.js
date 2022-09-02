@@ -60,7 +60,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDependencies = exports.downloadModules = exports.ensureModules = exports.listModules = exports.listDeps = exports.listDir = void 0;
+exports.getDependencies = exports.listDeps = exports.listDir = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const child_process_1 = __nccwpck_require__(2081);
@@ -73,41 +73,24 @@ const listDir = (dir) => {
     return output;
 };
 exports.listDir = listDir;
+const parseDependency = (line) => {
+    switch (true) {
+        case line.startsWith(GITHUB_DOMAIN):
+            const [domain, owner, repo] = line.split('/');
+            return `https://${domain}/${owner}/${repo}`;
+        default:
+            return;
+    }
+};
 const listDeps = (dir, module = '') => {
     let output = (0, child_process_1.execSync)(`go list -f {{.Deps}} ${module}`, {
         cwd: resolveDir(dir),
     }).toString();
     // trim `[]` at start and end of string
     output = output.slice(1, -1);
-    const deps = output.split(/\s+/).filter((d) => d.startsWith(GITHUB_DOMAIN));
-    return deps;
+    return output.split(/\s+/).map(parseDependency).filter(Boolean);
 };
 exports.listDeps = listDeps;
-const listModules = (dir) => {
-    core.info(`listModules ${resolveDir(dir)}`);
-    const output = (0, child_process_1.execSync)('go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all', { cwd: resolveDir(dir) }).toString();
-    const modules = output
-        .split('\n')
-        .filter(Boolean)
-        .map((line) => JSON.parse(line));
-    return modules;
-};
-exports.listModules = listModules;
-const ensureModules = (dir) => {
-    core.info('ensureModules');
-    // List direct dependency modules
-    let modules = (0, exports.listModules)(dir);
-    // Download modules for each dependency missing a Dir
-    (0, exports.downloadModules)(modules.filter((m) => !m.Dir), dir);
-    // Get dependency info again
-    modules = (0, exports.listModules)(dir);
-    return modules;
-};
-exports.ensureModules = ensureModules;
-const downloadModules = (modules, dir) => {
-    modules.forEach((m) => (0, child_process_1.execSync)(`go mod download ${m.Path}@${m.Version}`, { cwd: resolveDir(dir) }));
-};
-exports.downloadModules = downloadModules;
 const getDependencies = (dir = '') => {
     const direct = (0, exports.listDeps)(dir);
     const dependencies = direct.map((source) => ({

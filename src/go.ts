@@ -14,6 +14,16 @@ export const listDir = (dir: string) => {
   return output
 }
 
+const parseDependency = (line: string) => {
+  switch (true) {
+    case line.startsWith(GITHUB_DOMAIN):
+      const [domain, owner, repo] = line.split('/')
+      return `https://${domain}/${owner}/${repo}`
+    default:
+      return
+  }
+}
+
 export const listDeps = (dir: string, module: string = '') => {
   let output = execSync(`go list -f {{.Deps}} ${module}`, {
     cwd: resolveDir(dir),
@@ -21,47 +31,7 @@ export const listDeps = (dir: string, module: string = '') => {
   // trim `[]` at start and end of string
   output = output.slice(1, -1)
 
-  const deps = output.split(/\s+/).filter((d) => d.startsWith(GITHUB_DOMAIN))
-  return deps
-}
-
-export const listModules = (dir: string) => {
-  core.info(`listModules ${resolveDir(dir)}`)
-
-  const output = execSync(
-    'go list -m -f \'{{if not (or .Indirect .Main)}}{{ `{"Path": "` }}{{.Path}}{{ `", "Dir": "` }}{{.Dir}}{{ `", "Version": "` }}{{.Version}}{{ `"}` }}{{end}}\' all',
-    { cwd: resolveDir(dir) }
-  ).toString()
-
-  const modules: GoModule[] = output
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => JSON.parse(line))
-
-  return modules
-}
-
-export const ensureModules = (dir: string) => {
-  core.info('ensureModules')
-  // List direct dependency modules
-  let modules = listModules(dir)
-
-  // Download modules for each dependency missing a Dir
-  downloadModules(
-    modules.filter((m) => !m.Dir),
-    dir
-  )
-
-  // Get dependency info again
-  modules = listModules(dir)
-
-  return modules
-}
-
-export const downloadModules = (modules: GoModule[], dir: string) => {
-  modules.forEach((m) =>
-    execSync(`go mod download ${m.Path}@${m.Version}`, { cwd: resolveDir(dir) })
-  )
+  return output.split(/\s+/).map(parseDependency).filter(Boolean)
 }
 
 export const getDependencies = (dir: string = '') => {
