@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import path from 'path'
 import { execSync } from 'child_process'
-import { uniq } from 'lodash'
+import { groupBy, uniqBy } from 'lodash'
 
 const GITHUB_DOMAIN = 'github.com'
 
@@ -28,17 +28,27 @@ export const listDeps = (dir: string, module: string = '') => {
   // trim `[]` at start and end of string
   output = output.slice(1, -1)
 
-  return uniq(output.split(/\s+/).filter(filterDependency))
+  return output.split(/\s+/).filter(filterDependency)
 }
 
 export const getDependencies = (dir: string = '') => {
   const direct = listDeps(dir)
-  const dependencies = direct.map((d) => ({
+  let dependencies = direct.map((d) => ({
     source: parseDependency(d),
     dependencies: listDeps(dir, d)
       .filter((m) => m !== d)
       .map((d) => ({ source: parseDependency(d) })),
   }))
 
-  return dependencies as StackAidDependency[]
+  // Merge direct dependencies with the same source
+  const groups = groupBy(dependencies, 'source')
+  return Object.entries(groups).map(([source, group]) => {
+    return {
+      source,
+      dependencies: uniqBy(
+        group.flatMap((g) => g.dependencies),
+        'source'
+      ),
+    }
+  }) as StackAidDependency[]
 }

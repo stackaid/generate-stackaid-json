@@ -84,18 +84,25 @@ const listDeps = (dir, module = '') => {
     }).toString();
     // trim `[]` at start and end of string
     output = output.slice(1, -1);
-    return (0, lodash_1.uniq)(output.split(/\s+/).filter(filterDependency));
+    return output.split(/\s+/).filter(filterDependency);
 };
 exports.listDeps = listDeps;
 const getDependencies = (dir = '') => {
     const direct = (0, exports.listDeps)(dir);
-    const dependencies = direct.map((d) => ({
+    let dependencies = direct.map((d) => ({
         source: parseDependency(d),
         dependencies: (0, exports.listDeps)(dir, d)
             .filter((m) => m !== d)
             .map((d) => ({ source: parseDependency(d) })),
     }));
-    return dependencies;
+    // Merge direct dependencies with the same source
+    const groups = (0, lodash_1.groupBy)(dependencies, 'source');
+    return Object.entries(groups).map(([source, group]) => {
+        return {
+            source,
+            dependencies: (0, lodash_1.uniqBy)(group.flatMap((g) => g.dependencies), 'source'),
+        };
+    });
 };
 exports.getDependencies = getDependencies;
 
