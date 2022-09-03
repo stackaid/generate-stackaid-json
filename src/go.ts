@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import path from 'path'
 import { execSync } from 'child_process'
+import { uniq } from 'lodash'
 
 const GITHUB_DOMAIN = 'github.com'
 
@@ -27,14 +28,16 @@ export const listDeps = (dir: string, module: string = '') => {
   // trim `[]` at start and end of string
   output = output.slice(1, -1)
 
-  return output.split(/\s+/).filter(filterDependency)
+  return uniq(output.split(/\s+/).filter(filterDependency))
 }
 
 export const getDependencies = (dir: string = '') => {
   const direct = listDeps(dir)
   const dependencies = direct.map((d) => ({
     source: parseDependency(d),
-    dependencies: listDeps(dir, d).map((d) => ({ source: parseDependency(d) })),
+    dependencies: listDeps(dir, d)
+      .filter((m) => m !== d)
+      .map((d) => ({ source: parseDependency(d) })),
   }))
 
   return dependencies as StackAidDependency[]

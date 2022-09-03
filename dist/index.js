@@ -64,6 +64,7 @@ exports.getDependencies = exports.listDeps = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const child_process_1 = __nccwpck_require__(2081);
+const lodash_1 = __nccwpck_require__(250);
 const GITHUB_DOMAIN = 'github.com';
 const sourceDir = core.getInput('src_dir') || process.cwd();
 const resolveDir = (dir) => path_1.default.resolve(sourceDir, dir);
@@ -83,14 +84,16 @@ const listDeps = (dir, module = '') => {
     }).toString();
     // trim `[]` at start and end of string
     output = output.slice(1, -1);
-    return output.split(/\s+/).filter(filterDependency);
+    return (0, lodash_1.uniq)(output.split(/\s+/).filter(filterDependency));
 };
 exports.listDeps = listDeps;
 const getDependencies = (dir = '') => {
     const direct = (0, exports.listDeps)(dir);
     const dependencies = direct.map((d) => ({
         source: parseDependency(d),
-        dependencies: (0, exports.listDeps)(dir, d).map((d) => ({ source: parseDependency(d) })),
+        dependencies: (0, exports.listDeps)(dir, d)
+            .filter((m) => m !== d)
+            .map((d) => ({ source: parseDependency(d) })),
     }));
     return dependencies;
 };
