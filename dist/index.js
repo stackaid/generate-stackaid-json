@@ -7,7 +7,8 @@ require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEPENDENCY_FILE_TYPES = exports.SUMMARY_FILE_TYPES = exports.FileTypes = void 0;
+exports.DEPENDENCY_FILE_TYPES = exports.SUMMARY_FILE_TYPES = exports.FileTypes = exports.GITHUB_DOMAIN = void 0;
+exports.GITHUB_DOMAIN = 'github.com';
 exports.FileTypes = {
     go: ['go.mod'],
     java: ['pom.xml'],
@@ -63,15 +64,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDependencies = exports.listDeps = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
+const constants_1 = __nccwpck_require__(9677);
 const child_process_1 = __nccwpck_require__(2081);
 const lodash_1 = __nccwpck_require__(250);
-const GITHUB_DOMAIN = 'github.com';
 const sourceDir = core.getInput('src_dir') || process.cwd();
 const resolveDir = (dir) => path_1.default.resolve(sourceDir, dir);
-const filterDependency = (line) => line.startsWith(GITHUB_DOMAIN);
+const filterDependency = (line) => line.startsWith(constants_1.GITHUB_DOMAIN);
 const parseDependency = (line) => {
     switch (true) {
-        case line.startsWith(GITHUB_DOMAIN):
+        case line.startsWith(constants_1.GITHUB_DOMAIN):
             const [domain, owner, repo] = line.split('/');
             return `https://${domain}/${owner}/${repo}`;
         default:
@@ -166,10 +167,13 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const summary = yield (0, queries_1.getRepositorySummary)(owner, repo, glob);
     for (const { after, node } of summary) {
         switch (true) {
-            case (0, utils_1.matches)(node.filename, constants_1.FileTypes.go, glob):
+            case (0, utils_1.matches)(node.filename, constants_1.FileTypes.go, glob): {
                 core.info(`Found ${node.filename}, getting Go dependencies`);
-                stackAidJson.dependencies.push(...(0, go_1.getDependencies)(path_1.default.dirname(node.filename)));
+                const parent = `https://${constants_1.GITHUB_DOMAIN}/${owner}/${repo}`;
+                const deps = (0, go_1.getDependencies)(path_1.default.dirname(node.filename)).filter(({ source }) => source !== parent);
+                stackAidJson.dependencies.push(...deps);
                 break;
+            }
             default:
                 direct.push(...(yield (0, queries_1.getRepositoryDependencies)(owner, repo, 1, after)));
                 break;

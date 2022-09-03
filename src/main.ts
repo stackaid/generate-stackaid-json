@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import path from 'path'
-import { FileTypes } from './constants'
+import { FileTypes, GITHUB_DOMAIN } from './constants'
 import {
   createCommit,
   getRepositoryDependencies,
@@ -21,12 +21,15 @@ const run = async () => {
   const summary = await getRepositorySummary(owner, repo, glob)
   for (const { after, node } of summary) {
     switch (true) {
-      case matches(node.filename, FileTypes.go, glob):
+      case matches(node.filename, FileTypes.go, glob): {
         core.info(`Found ${node.filename}, getting Go dependencies`)
-        stackAidJson.dependencies.push(
-          ...getDependencies(path.dirname(node.filename))
+        const parent = `https://${GITHUB_DOMAIN}/${owner}/${repo}`
+        const deps = getDependencies(path.dirname(node.filename)).filter(
+          ({ source }) => source !== parent
         )
+        stackAidJson.dependencies.push(...deps)
         break
+      }
       default:
         direct.push(...(await getRepositoryDependencies(owner, repo, 1, after)))
         break

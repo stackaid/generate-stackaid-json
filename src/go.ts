@@ -1,9 +1,8 @@
 import * as core from '@actions/core'
 import path from 'path'
+import { GITHUB_DOMAIN } from './constants'
 import { execSync } from 'child_process'
 import { groupBy, uniqBy } from 'lodash'
-
-const GITHUB_DOMAIN = 'github.com'
 
 const sourceDir = core.getInput('src_dir') || process.cwd()
 

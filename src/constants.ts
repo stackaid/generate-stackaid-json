@@ -1,3 +1,5 @@
+export const GITHUB_DOMAIN = 'github.com'
+
 export const FileTypes = {
   go: ['go.mod'],
   java: ['pom.xml'],
