@@ -91,16 +91,15 @@ const getDependencies = (dir = '') => {
     const direct = (0, exports.listDeps)(dir);
     let dependencies = direct.map((d) => ({
         source: parseDependency(d),
-        dependencies: (0, exports.listDeps)(dir, d)
-            .filter((m) => m !== d)
-            .map((d) => ({ source: parseDependency(d) })),
+        dependencies: (0, exports.listDeps)(dir, d).map((d) => ({ source: parseDependency(d) })),
     }));
     // Merge direct dependencies with the same source
+    // and remove self dependencies
     const groups = (0, lodash_1.groupBy)(dependencies, 'source');
     return Object.entries(groups).map(([source, group]) => {
         return {
             source,
-            dependencies: (0, lodash_1.uniqBy)(group.flatMap((g) => g.dependencies), 'source'),
+            dependencies: (0, lodash_1.uniqBy)(group.flatMap((g) => g.dependencies), 'source').filter((d) => d.source !== source),
         };
     });
 };

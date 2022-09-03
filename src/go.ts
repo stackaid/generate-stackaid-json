@@ -35,12 +35,11 @@ export const getDependencies = (dir: string = '') => {
   const direct = listDeps(dir)
   let dependencies = direct.map((d) => ({
     source: parseDependency(d),
-    dependencies: listDeps(dir, d)
-      .filter((m) => m !== d)
-      .map((d) => ({ source: parseDependency(d) })),
+    dependencies: listDeps(dir, d).map((d) => ({ source: parseDependency(d) })),
   }))
 
   // Merge direct dependencies with the same source
+  // and remove self dependencies
   const groups = groupBy(dependencies, 'source')
   return Object.entries(groups).map(([source, group]) => {
     return {
@@ -48,7 +47,7 @@ export const getDependencies = (dir: string = '') => {
       dependencies: uniqBy(
         group.flatMap((g) => g.dependencies),
         'source'
-      ),
+      ).filter((d) => d.source !== source),
     }
   }) as StackAidDependency[]
 }
