@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
-      - uses: stackaid/generate-stackaid-json@v1.2
+      - uses: stackaid/generate-stackaid-json@v1.3
 ```
 
 This will commit a `stackaid.json` file in your repository which will then automatically show up for funding in the StackAid dashboard.
