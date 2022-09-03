@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import gql from 'graphql-tag'
+import { DEPENDENCY_FILE_TYPES, SUMMARY_FILE_TYPES } from './constants'
 import {
   Commit,
   CreateCommitMutation,
@@ -13,26 +14,9 @@ import {
   GetRepositorySummaryQuery,
   GetRepositorySummaryQueryVariables,
 } from '../types/graphql'
+import { matches } from './utils'
 import { print } from 'graphql'
 import { uniqBy } from 'lodash'
-
-const ALLOWED_FILENAMES = [
-  // Rust
-  'cargo.toml',
-  // PHP
-  'composer.json',
-  // Go
-  'go.mod',
-  // Java/Scala
-  'pom.xml',
-  // Python
-  'pipfile',
-  'pyproject.toml',
-  'requirements.txt',
-  'setup.py',
-  // Ruby
-  'gemfile',
-]
 
 export const summaryFragment = gql(`
   fragment summaryFragment on DependencyGraphManifestConnection {
@@ -124,7 +108,11 @@ const getRepositorySummaryPage = async (
   return edges
 }
 
-export const getRepositorySummary = async (owner: string, repo: string) => {
+export const getRepositorySummary = async (
+  owner: string,
+  repo: string,
+  glob: string = ''
+) => {
   let edges = await getRepositorySummaryPage(owner, repo)
   if (!edges.length) {
     return []
@@ -138,9 +126,7 @@ export const getRepositorySummary = async (owner: string, repo: string) => {
   }
 
   const relevant = edges
-    .filter((edge) =>
-      ALLOWED_FILENAMES.includes(edge.node.filename.toLowerCase())
-    )
+    .filter((edge) => matches(edge.node.filename, SUMMARY_FILE_TYPES, glob))
     .map((edge, i) => ({
       ...edge,
       after: i > 0 ? edges[i - 1].cursor : undefined,
@@ -185,7 +171,7 @@ export const getRepositoryDependencies = async (
 
   const dependencies = uniqBy(
     nodes
-      .filter((n) => ALLOWED_FILENAMES.includes(n.filename.toLowerCase()))
+      .filter((n) => matches(n.filename, DEPENDENCY_FILE_TYPES))
       .flatMap((n) => n.dependencies.nodes)
       .filter((d) => d.repository?.url),
     (d) => d.repository.url

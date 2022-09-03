@@ -15,7 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: ./
+      - uses: actions/setup-go@v3
+      - id: generate
+        uses: ./
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           skip_publish: true
+      - run: echo $STACKAID_JSON
+        env:
+          STACKAID_JSON: ${{ steps.generate.outputs.stackaid_json}}
