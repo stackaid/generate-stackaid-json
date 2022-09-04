@@ -61,7 +61,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDependencies = exports.listDeps = void 0;
+exports.getDependencies = exports.listModuleDeps = exports.listDirectDeps = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const constants_1 = __nccwpck_require__(9677);
@@ -79,20 +79,36 @@ const parseDependency = (line) => {
             return;
     }
 };
-const listDeps = (dir, module = '') => {
-    let output = (0, child_process_1.execSync)(`go list -f {{.Deps}} ${module}`, {
-        cwd: resolveDir(dir),
-    }).toString();
-    // trim `[]` at start and end of string
-    output = output.slice(1, -1);
+const listDirectDeps = (dir) => {
+    let output = (0, child_process_1.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: resolveDir(dir) }).toString();
+    return output
+        .split('\n')
+        .map((d) => d.split(' ')[0])
+        .filter(filterDependency);
+};
+exports.listDirectDeps = listDirectDeps;
+const listModuleDeps = (dir, module) => {
+    let output = '';
+    try {
+        output = (0, child_process_1.execSync)(`go list -f {{.Deps}} ${module}`, {
+            cwd: resolveDir(dir),
+        }).toString();
+        // trim `[]` at start and end of string
+        output = output.slice(1, -1);
+    }
+    catch (e) {
+        // Command may error if no required module actually provides this package
+    }
     return output.split(/\s+/).filter(filterDependency);
 };
-exports.listDeps = listDeps;
+exports.listModuleDeps = listModuleDeps;
 const getDependencies = (dir = '') => {
-    const direct = (0, exports.listDeps)(dir);
+    const direct = (0, exports.listDirectDeps)(dir);
     let dependencies = direct.map((d) => ({
         source: parseDependency(d),
-        dependencies: (0, exports.listDeps)(dir, d).map((d) => ({ source: parseDependency(d) })),
+        dependencies: (0, exports.listModuleDeps)(dir, d).map((d) => ({
+            source: parseDependency(d),
+        })),
     }));
     // Merge direct dependencies with the same source
     // and remove self dependencies
