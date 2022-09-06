@@ -61,7 +61,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDependencies = exports.listModuleDeps = exports.listDirectDeps = void 0;
+exports.getDependencies = exports.getModuleGraph = exports.listDirectDeps = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const constants_1 = __nccwpck_require__(9677);
@@ -79,46 +79,64 @@ const parseDependency = (line) => {
             return;
     }
 };
+const parseModuleUrl = (m) => {
+    const [url, version = ''] = m.split('@');
+    const [domain, owner, repo] = url.split('/');
+    return { module: [domain, owner, repo].join('/'), version };
+};
 const listDirectDeps = (dir) => {
     let output = (0, child_process_1.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: resolveDir(dir) }).toString();
     return output
         .split('\n')
-        .map((d) => d.split(' ')[0])
-        .filter(filterDependency);
+        .map((d) => {
+        const [module, version = ''] = d.split(' ');
+        return { module, version };
+    })
+        .filter((entry) => filterDependency(entry.module));
 };
 exports.listDirectDeps = listDirectDeps;
-const listModuleDeps = (dir, module) => {
-    let output = '';
-    try {
-        output = (0, child_process_1.execSync)(`go list -f {{.Deps}} ${module}`, {
-            cwd: resolveDir(dir),
-        }).toString();
-        // trim `[]` at start and end of string
-        output = output.slice(1, -1);
-    }
-    catch (e) {
-        // Command may error if no required module actually provides this package
-    }
-    return output.split(/\s+/).filter(filterDependency);
+const getModuleGraph = (dir) => {
+    const output = (0, child_process_1.execSync)(`go mod graph`, {
+        cwd: resolveDir(dir),
+    }).toString();
+    const graph = {};
+    output.split('\n').forEach((line) => {
+        if (!line) {
+            return;
+        }
+        const [parent, child] = line.split(' ');
+        const mod = parseModuleUrl(parent);
+        const childMod = parseModuleUrl(child);
+        const key = `${mod.module}@${mod.version}`;
+        graph[key] = graph[key] || [];
+        if (childMod.module !== key) {
+            graph[key].push(childMod);
+        }
+    });
+    Object.entries(graph).forEach(([key, deps]) => {
+        graph[key] = (0, lodash_1.uniqBy)(deps, 'module');
+    });
+    return graph;
 };
-exports.listModuleDeps = listModuleDeps;
+exports.getModuleGraph = getModuleGraph;
 const getDependencies = (dir = '') => {
+    const graph = (0, exports.getModuleGraph)(dir);
     const direct = (0, exports.listDirectDeps)(dir);
-    let dependencies = direct.map((d) => ({
-        source: parseDependency(d),
-        dependencies: (0, exports.listModuleDeps)(dir, d).map((d) => ({
-            source: parseDependency(d),
-        })),
-    }));
-    // Merge direct dependencies with the same source
-    // and remove self dependencies
-    const groups = (0, lodash_1.groupBy)(dependencies, 'source');
-    return Object.entries(groups).map(([source, group]) => {
+    let dependencies = direct
+        .filter((d) => filterDependency(d.module))
+        .map((d) => {
+        const url = parseModuleUrl(d.module).module;
+        const deps = graph[`${url}@${d.version}`] || [];
         return {
-            source,
-            dependencies: (0, lodash_1.uniqBy)(group.flatMap((g) => g.dependencies), 'source').filter((d) => d.source !== source),
+            source: parseDependency(d.module),
+            dependencies: deps
+                .filter((d) => filterDependency(d.module))
+                .map((d) => ({
+                source: parseDependency(d.module),
+            })),
         };
     });
+    return dependencies;
 };
 exports.getDependencies = getDependencies;
 
