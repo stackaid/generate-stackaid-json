@@ -196,7 +196,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const owner = process.env.GITHUB_REPOSITORY_OWNER;
     const repo = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/', 2)[1];
     const stackAidJson = { version: 1, dependencies: [] };
-    const direct = [];
+    let direct = [];
     const glob = '**/';
     const summary = yield (0, queries_1.getRepositorySummary)(owner, repo, glob);
     for (const { after, node } of summary) {
@@ -215,6 +215,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     // We need to query each direct dependency separately since the graphql API
     // does NOT support nested dependencies.
+    direct = (0, lodash_1.uniqBy)(direct, (d) => d.repository.url);
     for (const dep of direct) {
         const { url: source, name, owner: { login: owner }, } = dep.repository;
         const summary = yield (0, queries_1.getRepositorySummary)(owner, name);
@@ -397,8 +398,8 @@ const getRepositorySummary = (owner, repo, glob = '') => __awaiter(void 0, void 
         cursor = next !== cursor ? next : '';
     }
     const relevant = edges
-        .filter((edge) => (0, utils_1.matches)(edge.node.filename, constants_1.SUMMARY_FILE_TYPES, glob))
-        .map((edge, i) => (Object.assign(Object.assign({}, edge), { after: i > 0 ? edges[i - 1].cursor : undefined })));
+        .map((edge, i) => (Object.assign(Object.assign({}, edge), { after: i > 0 ? edges[i - 1].cursor : undefined })))
+        .filter((edge) => (0, utils_1.matches)(edge.node.filename, constants_1.SUMMARY_FILE_TYPES, glob));
     return relevant;
 });
 exports.getRepositorySummary = getRepositorySummary;
