@@ -15,7 +15,7 @@ const run = async () => {
   const repo = process.env.GITHUB_REPOSITORY?.split('/', 2)[1] as string
 
   const stackAidJson: StackAidJson = { version: 1, dependencies: [] }
-  const direct = []
+  let direct = []
 
   const glob = '**/'
   const summary = await getRepositorySummary(owner, repo, glob)
@@ -38,6 +38,7 @@ const run = async () => {
 
   // We need to query each direct dependency separately since the graphql API
   // does NOT support nested dependencies.
+  direct = uniqBy(direct, (d) => d.repository.url)
   for (const dep of direct) {
     const {
       url: source,

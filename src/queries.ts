@@ -126,11 +126,11 @@ export const getRepositorySummary = async (
   }
 
   const relevant = edges
-    .filter((edge) => matches(edge.node.filename, SUMMARY_FILE_TYPES, glob))
     .map((edge, i) => ({
       ...edge,
       after: i > 0 ? edges[i - 1].cursor : undefined,
     }))
+    .filter((edge) => matches(edge.node.filename, SUMMARY_FILE_TYPES, glob))
 
   return relevant
 }
