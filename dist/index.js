@@ -13,7 +13,7 @@ exports.FileTypes = {
     go: ['go.mod'],
     java: ['pom.xml'],
     php: ['composer.json'],
-    python: ['pipfile', 'pyproject.toml', 'requirements.txt', 'setup.py'],
+    python: ['pipfile', 'pyproject.toml', 'setup.py'],
     ruby: ['gemfile'],
     rust: ['cargo.toml'],
 };
