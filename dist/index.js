@@ -12,6 +12,7 @@ exports.GITHUB_DOMAIN = 'github.com';
 exports.FileTypes = {
     go: ['go.mod'],
     java: ['pom.xml'],
+    javascript: ['package.json'],
     php: ['composer.json'],
     python: ['pipfile', 'pyproject.toml', 'setup.py'],
     ruby: ['gemfile'],
@@ -29,7 +30,7 @@ exports.DEPENDENCY_FILE_TYPES = [
 
 /***/ }),
 
-/***/ 9783:
+/***/ 5865:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -57,18 +58,70 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.addFileChange = exports.publishFiles = exports.isSamePublishRepo = exports.sourceDir = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github_1 = __nccwpck_require__(5438);
+const queries_1 = __nccwpck_require__(6719);
+exports.sourceDir = core.getInput('src_dir') || process.cwd();
+exports.isSamePublishRepo = core.getInput('publish_repo').toLowerCase() ===
+    `${github_1.context.repo.owner.toLowerCase()}/${github_1.context.repo.repo.toLowerCase()}`;
+const publishFiles = (message, files) => __awaiter(void 0, void 0, void 0, function* () {
+    const [publishOwner, publishRepo] = core
+        .getInput('publish_repo')
+        .split('/', 2);
+    yield (0, queries_1.createCommit)(publishOwner, publishRepo, {
+        message: {
+            headline: message,
+            body: '',
+        },
+        fileChanges: {
+            additions: files,
+            deletions: [],
+        },
+    });
+});
+exports.publishFiles = publishFiles;
+const addFileChange = (path, contents) => {
+    const publishPath = core.getInput('publish_path');
+    if (publishPath) {
+        path = `${publishPath}/${path}`;
+    }
+    return {
+        path,
+        contents: Buffer.from(contents).toString('base64'),
+    };
+};
+exports.addFileChange = addFileChange;
+
+
+/***/ }),
+
+/***/ 9783:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDependencies = exports.getModuleGraph = exports.listDirectDeps = void 0;
-const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const constants_1 = __nccwpck_require__(9677);
 const child_process_1 = __nccwpck_require__(2081);
+const github_1 = __nccwpck_require__(5865);
 const lodash_1 = __nccwpck_require__(250);
-const sourceDir = core.getInput('src_dir') || process.cwd();
-const resolveDir = (dir) => path_1.default.resolve(sourceDir, dir);
+const resolveDir = (dir) => path_1.default.resolve(github_1.sourceDir, dir);
 const filterDependency = (line) => line.startsWith(constants_1.GITHUB_DOMAIN);
 const parseDependency = (line) => {
     switch (true) {
@@ -187,14 +240,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const constants_1 = __nccwpck_require__(9677);
-const queries_1 = __nccwpck_require__(6719);
+const github_1 = __nccwpck_require__(5865);
 const go_1 = __nccwpck_require__(9783);
+const queries_1 = __nccwpck_require__(6719);
 const utils_1 = __nccwpck_require__(7696);
+const fs_1 = __nccwpck_require__(7147);
 const lodash_1 = __nccwpck_require__(250);
 const run = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const owner = process.env.GITHUB_REPOSITORY_OWNER;
     const repo = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/', 2)[1];
+    const packageJson = [];
     const stackAidJson = { version: 1, dependencies: [] };
     let direct = [];
     const glob = '**/';
@@ -207,6 +263,10 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
                 const deps = (0, go_1.getDependencies)(path_1.default.dirname(node.filename)).filter(({ source }) => source !== parent);
                 stackAidJson.dependencies.push(...deps);
                 break;
+            }
+            case (0, utils_1.matches)(node.filename, constants_1.FileTypes.javascript, glob): {
+                core.info(`Found ${node.filename}, copying dependencies`);
+                packageJson.push(node.filename);
             }
             default:
                 direct.push(...(yield (0, queries_1.getRepositoryDependencies)(owner, repo, 1, after)));
@@ -234,36 +294,28 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     // Make file available to subsequent actions
     core.setOutput('stackaid_json', stackAidJson);
+    // Create list of files for commit
+    const files = [];
+    if (stackAidJson.dependencies.length > 0) {
+        (0, github_1.addFileChange)('stackaid.json', JSON.stringify(stackAidJson, null, 2));
+    }
+    const includePackageJson = core.getBooleanInput('include_package_json');
+    if (includePackageJson && !github_1.isSamePublishRepo) {
+        // Read each file and only pull out relevant fields
+        files.push(...packageJson.map((filename) => {
+            const { name, dependencies, devDependencies } = JSON.parse((0, fs_1.readFileSync)(path_1.default.resolve(github_1.sourceDir, filename), 'utf8'));
+            return (0, github_1.addFileChange)(filename, JSON.stringify({ name, dependencies, devDependencies }, null, 2));
+        }));
+    }
+    core.debug(`Files to be published`);
+    core.debug(JSON.stringify(files, null, 2));
     const skipPublish = core.getBooleanInput('skip_publish');
     if (skipPublish) {
-        core.info('Skipping publish of generated stackaid.json');
-        return;
+        core.info('Skipping publish of generated stackaid dependencies');
     }
-    // Commit file to provided repo
-    const [publishOwner, publishRepo] = core
-        .getInput('publish_repo')
-        .split('/', 2);
-    let filePath = `stackaid.json`;
-    const publishPath = core.getInput('publish_path');
-    if (publishPath) {
-        filePath = `${publishPath}/${filePath}`;
+    else {
+        yield (0, github_1.publishFiles)(`Update stackaid dependencies for ${owner}/${repo}`, files);
     }
-    const fileContents = JSON.stringify(stackAidJson, null, 2);
-    yield (0, queries_1.createCommit)(publishOwner, publishRepo, {
-        message: {
-            headline: `Update stackaid.json dependencies for ${owner}/${repo}`,
-            body: '',
-        },
-        fileChanges: {
-            additions: [
-                {
-                    path: filePath,
-                    contents: Buffer.from(fileContents).toString('base64'),
-                },
-            ],
-            deletions: [],
-        },
-    });
 });
 run();
 
@@ -5490,7 +5542,7 @@ exports.GraphQLError = void 0;
 exports.formatError = formatError;
 exports.printError = printError;
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _location = __nccwpck_require__(1922);
 
@@ -6138,7 +6190,7 @@ var _invariant = __nccwpck_require__(8847);
 
 var _isIterableObject = __nccwpck_require__(1258);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _isPromise = __nccwpck_require__(3910);
 
@@ -9697,7 +9749,7 @@ function isIterableObject(maybeIterable) {
 
 /***/ }),
 
-/***/ 5865:
+/***/ 681:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -15185,7 +15237,7 @@ var _inspect = __nccwpck_require__(102);
 
 var _instanceOf = __nccwpck_require__(3481);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _keyMap = __nccwpck_require__(711);
 
@@ -16488,7 +16540,7 @@ var _inspect = __nccwpck_require__(102);
 
 var _instanceOf = __nccwpck_require__(3481);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _toObjMap = __nccwpck_require__(4728);
 
@@ -17895,7 +17947,7 @@ exports.specifiedScalarTypes = void 0;
 
 var _inspect = __nccwpck_require__(102);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _GraphQLError = __nccwpck_require__(4797);
 
@@ -18269,7 +18321,7 @@ var _inspect = __nccwpck_require__(102);
 
 var _instanceOf = __nccwpck_require__(3481);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _toObjMap = __nccwpck_require__(4728);
 
@@ -19846,7 +19898,7 @@ var _invariant = __nccwpck_require__(8847);
 
 var _isIterableObject = __nccwpck_require__(1258);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _kinds = __nccwpck_require__(1927);
 
@@ -20165,7 +20217,7 @@ var _devAssert = __nccwpck_require__(6514);
 
 var _inspect = __nccwpck_require__(102);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _keyValMap = __nccwpck_require__(9268);
 
@@ -20563,7 +20615,7 @@ var _invariant = __nccwpck_require__(8847);
 
 var _isIterableObject = __nccwpck_require__(1258);
 
-var _isObjectLike = __nccwpck_require__(5865);
+var _isObjectLike = __nccwpck_require__(681);
 
 var _Path = __nccwpck_require__(1262);
 
