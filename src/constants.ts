@@ -3,6 +3,7 @@ export const GITHUB_DOMAIN = 'github.com'
 export const FileTypes = {
   go: ['go.mod'],
   java: ['pom.xml'],
+  javascript: ['package.json'],
   php: ['composer.json'],
   python: ['pipfile', 'pyproject.toml', 'setup.py'],
   ruby: ['gemfile'],

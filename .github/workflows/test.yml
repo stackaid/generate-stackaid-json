@@ -19,6 +19,7 @@ jobs:
       - id: generate
         uses: ./
         with:
+          publish_repo: 'stackaid/funding'
           skip_publish: true
       - run: echo $STACKAID_JSON
         env:

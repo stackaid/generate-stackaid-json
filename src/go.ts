@@ -1,10 +1,8 @@
-import * as core from '@actions/core'
 import path from 'path'
 import { GITHUB_DOMAIN } from './constants'
 import { execSync } from 'child_process'
+import { sourceDir } from './github'
 import { uniqBy } from 'lodash'
-
-const sourceDir = core.getInput('src_dir') || process.cwd()
 
 const resolveDir = (dir: string) => path.resolve(sourceDir, dir)
 

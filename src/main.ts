@@ -2,18 +2,23 @@ import * as core from '@actions/core'
 import path from 'path'
 import { FileTypes, GITHUB_DOMAIN } from './constants'
 import {
-  createCommit,
-  getRepositoryDependencies,
-  getRepositorySummary,
-} from './queries'
+  addFileChange,
+  isSamePublishRepo,
+  publishFiles,
+  sourceDir,
+} from './github'
 import { getDependencies } from './go'
+import { getRepositoryDependencies, getRepositorySummary } from './queries'
 import { matches } from './utils'
+import { readFileSync } from 'fs'
 import { uniqBy } from 'lodash'
+import { FileAddition } from '../types/graphql'
 
 const run = async () => {
   const owner = process.env.GITHUB_REPOSITORY_OWNER as string
   const repo = process.env.GITHUB_REPOSITORY?.split('/', 2)[1] as string
 
+  const packageJson: string[] = []
   const stackAidJson: StackAidJson = { version: 1, dependencies: [] }
   let direct = []
 
@@ -29,6 +34,10 @@ const run = async () => {
         )
         stackAidJson.dependencies.push(...deps)
         break
+      }
+      case matches(node.filename, FileTypes.javascript, glob): {
+        core.info(`Found ${node.filename}, copying dependencies`)
+        packageJson.push(node.filename)
       }
       default:
         direct.push(...(await getRepositoryDependencies(owner, repo, 1, after)))
@@ -65,39 +74,40 @@ const run = async () => {
   // Make file available to subsequent actions
   core.setOutput('stackaid_json', stackAidJson)
 
+  // Create list of files for commit
+  const files: FileAddition[] = []
+  if (stackAidJson.dependencies.length > 0) {
+    addFileChange('stackaid.json', JSON.stringify(stackAidJson, null, 2))
+  }
+
+  const includePackageJson = core.getBooleanInput('include_package_json')
+  if (includePackageJson && !isSamePublishRepo) {
+    // Read each file and only pull out relevant fields
+    files.push(
+      ...packageJson.map((filename) => {
+        const { name, dependencies, devDependencies } = JSON.parse(
+          readFileSync(path.resolve(sourceDir, filename), 'utf8')
+        )
+        return addFileChange(
+          filename,
+          JSON.stringify({ name, dependencies, devDependencies }, null, 2)
+        )
+      })
+    )
+  }
+
+  core.debug(`Files to be published`)
+  core.debug(JSON.stringify(files, null, 2))
+
   const skipPublish = core.getBooleanInput('skip_publish')
   if (skipPublish) {
-    core.info('Skipping publish of generated stackaid.json')
-    return
+    core.info('Skipping publish of generated stackaid dependencies')
+  } else {
+    await publishFiles(
+      `Update stackaid dependencies for ${owner}/${repo}`,
+      files
+    )
   }
-
-  // Commit file to provided repo
-  const [publishOwner, publishRepo] = core
-    .getInput('publish_repo')
-    .split('/', 2)
-
-  let filePath = `stackaid.json`
-  const publishPath = core.getInput('publish_path')
-  if (publishPath) {
-    filePath = `${publishPath}/${filePath}`
-  }
-  const fileContents = JSON.stringify(stackAidJson, null, 2)
-
-  await createCommit(publishOwner, publishRepo, {
-    message: {
-      headline: `Update stackaid.json dependencies for ${owner}/${repo}`,
-      body: '',
-    },
-    fileChanges: {
-      additions: [
-        {
-          path: filePath,
-          contents: Buffer.from(fileContents).toString('base64'),
-        },
-      ],
-      deletions: [],
-    },
-  })
 }
 
 run()
