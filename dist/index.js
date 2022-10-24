@@ -297,7 +297,7 @@ const run = () => __awaiter(void 0, void 0, void 0, function* () {
     // Create list of files for commit
     const files = [];
     if (stackAidJson.dependencies.length > 0) {
-        (0, github_1.addFileChange)('stackaid.json', JSON.stringify(stackAidJson, null, 2));
+        files.push((0, github_1.addFileChange)('stackaid.json', JSON.stringify(stackAidJson, null, 2)));
     }
     const includePackageJson = core.getBooleanInput('include_package_json');
     if (includePackageJson && !github_1.isSamePublishRepo) {

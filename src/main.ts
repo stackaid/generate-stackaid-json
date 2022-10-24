@@ -77,7 +77,9 @@ const run = async () => {
   // Create list of files for commit
   const files: FileAddition[] = []
   if (stackAidJson.dependencies.length > 0) {
-    addFileChange('stackaid.json', JSON.stringify(stackAidJson, null, 2))
+    files.push(
+      addFileChange('stackaid.json', JSON.stringify(stackAidJson, null, 2))
+    )
   }
 
   const includePackageJson = core.getBooleanInput('include_package_json')

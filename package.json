@@ -1,6 +1,6 @@
 {
   "name": "stackaid-json-generator",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": false,
   "description": "A GitHub action to generate a stackaid.json file based on your repository's dependency graph",
   "main": "lib/src/main.js",
