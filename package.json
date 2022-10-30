@@ -3,13 +3,13 @@
   "version": "1.9.0",
   "private": false,
   "description": "A GitHub action to generate a stackaid.json file based on your repository's dependency graph",
-  "main": "lib/src/main.js",
+  "main": "lib/src/action.js",
   "scripts": {
     "build": "tsc",
-    "package": "ncc build --source-map --license licenses.txt",
+    "package": "ncc build src/action.ts --source-map --license licenses.txt",
     "test": "jest --passWithNoTests",
     "all": "npm run build && npm run package && npm test",
-    "start": "node lib/src/main.js",
+    "start": "node lib/src/action.js",
     "schema": "curl -o ./schema.graphql https://docs.github.com/public/schema.docs.graphql",
     "codegen": "graphql-codegen --config codegen.yml"
   },

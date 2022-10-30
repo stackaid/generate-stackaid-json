@@ -1,10 +1,16 @@
+interface PackageJson {
+  filename: string
+  dependencies: Record<string, string>
+  devDependencies: Record<string, string>
+}
+
 interface StackAidDependency {
   source: string
   dependencies?: StackAidDependency[]
 }
 
 interface StackAidJson {
-  version: number
+  version: 1 // Only allowed version for the time being
   dependencies: StackAidDependency[]
 }
 

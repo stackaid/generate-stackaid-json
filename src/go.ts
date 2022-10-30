@@ -1,10 +1,7 @@
 import path from 'path'
 import { GITHUB_DOMAIN } from './constants'
 import { execSync } from 'child_process'
-import { sourceDir } from './github'
 import { uniqBy } from 'lodash'
-
-const resolveDir = (dir: string) => path.resolve(sourceDir, dir)
 
 const filterDependency = (line: string) => line.startsWith(GITHUB_DOMAIN)
 
@@ -25,10 +22,10 @@ const parseModuleUrl = (m: string) => {
   return { module: [domain, owner, repo].join('/'), version }
 }
 
-export const listDirectDeps = (dir: string) => {
+export const listDirectDeps = (dir: string, sourceDir: string) => {
   let output = execSync(
     `go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`,
-    { cwd: resolveDir(dir) }
+    { cwd: path.resolve(sourceDir, dir) }
   ).toString()
 
   return output
@@ -40,9 +37,9 @@ export const listDirectDeps = (dir: string) => {
     .filter((entry) => filterDependency(entry.module))
 }
 
-export const getModuleGraph = (dir: string) => {
+export const getModuleGraph = (dir: string, sourceDir: string) => {
   const output = execSync(`go mod graph`, {
-    cwd: resolveDir(dir),
+    cwd: path.resolve(sourceDir, dir),
   }).toString()
 
   const graph: Record<string, { module: string; version: string }[]> = {}
@@ -71,9 +68,12 @@ export const getModuleGraph = (dir: string) => {
   return graph
 }
 
-export const getDependencies = (dir: string = '') => {
-  const graph = getModuleGraph(dir)
-  const direct = listDirectDeps(dir)
+export const getDependencies = (
+  dir: string = '',
+  sourceDir: string = process.cwd()
+) => {
+  const graph = getModuleGraph(dir, sourceDir)
+  const direct = listDirectDeps(dir, sourceDir)
 
   let dependencies = direct
     .filter((d) => filterDependency(d.module))

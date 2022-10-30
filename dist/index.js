@@ -1,552 +1,6 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 9677:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEPENDENCY_FILE_TYPES = exports.SUMMARY_FILE_TYPES = exports.FileTypes = exports.GITHUB_DOMAIN = void 0;
-exports.GITHUB_DOMAIN = 'github.com';
-exports.FileTypes = {
-    go: ['go.mod'],
-    java: ['pom.xml'],
-    javascript: ['package.json'],
-    php: ['composer.json'],
-    python: ['pipfile', 'pyproject.toml', 'setup.py'],
-    ruby: ['gemfile'],
-    rust: ['cargo.toml'],
-};
-exports.SUMMARY_FILE_TYPES = Object.values(exports.FileTypes).flat();
-exports.DEPENDENCY_FILE_TYPES = [
-    exports.FileTypes.java,
-    exports.FileTypes.php,
-    exports.FileTypes.python,
-    exports.FileTypes.ruby,
-    exports.FileTypes.rust,
-].flat();
-
-
-/***/ }),
-
-/***/ 5865:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.addFileChange = exports.publishFiles = exports.isSamePublishRepo = exports.sourceDir = void 0;
-const core = __importStar(__nccwpck_require__(2186));
-const github_1 = __nccwpck_require__(5438);
-const queries_1 = __nccwpck_require__(6719);
-exports.sourceDir = core.getInput('src_dir') || process.cwd();
-exports.isSamePublishRepo = core.getInput('publish_repo').toLowerCase() ===
-    `${github_1.context.repo.owner.toLowerCase()}/${github_1.context.repo.repo.toLowerCase()}`;
-const publishFiles = (message, files) => __awaiter(void 0, void 0, void 0, function* () {
-    const [publishOwner, publishRepo] = core
-        .getInput('publish_repo')
-        .split('/', 2);
-    yield (0, queries_1.createCommit)(publishOwner, publishRepo, {
-        message: {
-            headline: message,
-            body: '',
-        },
-        fileChanges: {
-            additions: files,
-            deletions: [],
-        },
-    });
-});
-exports.publishFiles = publishFiles;
-const addFileChange = (path, contents) => {
-    const publishPath = core.getInput('publish_path');
-    if (publishPath) {
-        path = `${publishPath}/${path}`;
-    }
-    return {
-        path,
-        contents: Buffer.from(contents).toString('base64'),
-    };
-};
-exports.addFileChange = addFileChange;
-
-
-/***/ }),
-
-/***/ 9783:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDependencies = exports.getModuleGraph = exports.listDirectDeps = void 0;
-const path_1 = __importDefault(__nccwpck_require__(1017));
-const constants_1 = __nccwpck_require__(9677);
-const child_process_1 = __nccwpck_require__(2081);
-const github_1 = __nccwpck_require__(5865);
-const lodash_1 = __nccwpck_require__(250);
-const resolveDir = (dir) => path_1.default.resolve(github_1.sourceDir, dir);
-const filterDependency = (line) => line.startsWith(constants_1.GITHUB_DOMAIN);
-const parseDependency = (line) => {
-    switch (true) {
-        case line.startsWith(constants_1.GITHUB_DOMAIN):
-            const [domain, owner, repo] = line.split('/');
-            return `https://${domain}/${owner}/${repo}`;
-        default:
-            return;
-    }
-};
-const parseModuleUrl = (m) => {
-    const [url, version = ''] = m.split('@');
-    const [domain, owner, repo] = url.split('/');
-    return { module: [domain, owner, repo].join('/'), version };
-};
-const listDirectDeps = (dir) => {
-    let output = (0, child_process_1.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: resolveDir(dir) }).toString();
-    return output
-        .split('\n')
-        .map((d) => {
-        const [module, version = ''] = d.split(' ');
-        return { module, version };
-    })
-        .filter((entry) => filterDependency(entry.module));
-};
-exports.listDirectDeps = listDirectDeps;
-const getModuleGraph = (dir) => {
-    const output = (0, child_process_1.execSync)(`go mod graph`, {
-        cwd: resolveDir(dir),
-    }).toString();
-    const graph = {};
-    output.split('\n').forEach((line) => {
-        if (!line) {
-            return;
-        }
-        const [parent, child] = line.split(' ');
-        const mod = parseModuleUrl(parent);
-        const childMod = parseModuleUrl(child);
-        const key = `${mod.module}@${mod.version}`;
-        graph[key] = graph[key] || [];
-        if (childMod.module !== key) {
-            graph[key].push(childMod);
-        }
-    });
-    Object.entries(graph).forEach(([key, deps]) => {
-        graph[key] = (0, lodash_1.uniqBy)(deps, 'module');
-    });
-    return graph;
-};
-exports.getModuleGraph = getModuleGraph;
-const getDependencies = (dir = '') => {
-    const graph = (0, exports.getModuleGraph)(dir);
-    const direct = (0, exports.listDirectDeps)(dir);
-    let dependencies = direct
-        .filter((d) => filterDependency(d.module))
-        .map((d) => {
-        const url = parseModuleUrl(d.module).module;
-        const deps = graph[`${url}@${d.version}`] || [];
-        return {
-            source: parseDependency(d.module),
-            dependencies: deps
-                .filter((d) => filterDependency(d.module))
-                .map((d) => ({
-                source: parseDependency(d.module),
-            })),
-        };
-    });
-    return dependencies;
-};
-exports.getDependencies = getDependencies;
-
-
-/***/ }),
-
-/***/ 9536:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core = __importStar(__nccwpck_require__(2186));
-const path_1 = __importDefault(__nccwpck_require__(1017));
-const constants_1 = __nccwpck_require__(9677);
-const github_1 = __nccwpck_require__(5865);
-const go_1 = __nccwpck_require__(9783);
-const queries_1 = __nccwpck_require__(6719);
-const utils_1 = __nccwpck_require__(7696);
-const fs_1 = __nccwpck_require__(7147);
-const lodash_1 = __nccwpck_require__(250);
-const run = () => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const owner = process.env.GITHUB_REPOSITORY_OWNER;
-    const repo = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/', 2)[1];
-    const packageJson = [];
-    const stackAidJson = { version: 1, dependencies: [] };
-    let direct = [];
-    const glob = '**/';
-    const summary = yield (0, queries_1.getRepositorySummary)(owner, repo, glob);
-    for (const { after, node } of summary) {
-        switch (true) {
-            case (0, utils_1.matches)(node.filename, constants_1.FileTypes.go, glob): {
-                core.info(`Found ${node.filename}, getting Go dependencies`);
-                const parent = `https://${constants_1.GITHUB_DOMAIN}/${owner}/${repo}`;
-                const deps = (0, go_1.getDependencies)(path_1.default.dirname(node.filename)).filter(({ source }) => source !== parent);
-                stackAidJson.dependencies.push(...deps);
-                break;
-            }
-            case (0, utils_1.matches)(node.filename, constants_1.FileTypes.javascript, glob): {
-                core.info(`Found ${node.filename}, copying dependencies`);
-                packageJson.push(node.filename);
-            }
-            default:
-                direct.push(...(yield (0, queries_1.getRepositoryDependencies)(owner, repo, 1, after)));
-                break;
-        }
-    }
-    // We need to query each direct dependency separately since the graphql API
-    // does NOT support nested dependencies.
-    direct = (0, lodash_1.uniqBy)(direct, (d) => d.repository.url);
-    for (const dep of direct) {
-        const { url: source, name, owner: { login: owner }, } = dep.repository;
-        const summary = yield (0, queries_1.getRepositorySummary)(owner, name);
-        core.info(`${owner}/${name}: ${summary.map((s) => s.node.filename)}`);
-        let indirect = [];
-        for (const { after } of summary) {
-            const deps = yield (0, queries_1.getRepositoryDependencies)(owner, name, 1, after);
-            indirect.push(...deps.map((d) => ({ source: d.repository.url })));
-        }
-        // Dependencies shouldn't be funding themselves.
-        indirect = indirect.filter((d) => d.source !== source);
-        stackAidJson.dependencies.push({
-            source,
-            dependencies: (0, lodash_1.uniqBy)(indirect, 'source'),
-        });
-    }
-    // Make file available to subsequent actions
-    core.setOutput('stackaid_json', stackAidJson);
-    // Create list of files for commit
-    const files = [];
-    if (stackAidJson.dependencies.length > 0) {
-        files.push((0, github_1.addFileChange)('stackaid.json', JSON.stringify(stackAidJson, null, 2)));
-    }
-    const includePackageJson = core.getBooleanInput('include_package_json');
-    if (includePackageJson && !github_1.isSamePublishRepo) {
-        // Read each file and only pull out relevant fields
-        files.push(...packageJson.map((filename) => {
-            const { name, dependencies, devDependencies } = JSON.parse((0, fs_1.readFileSync)(path_1.default.resolve(github_1.sourceDir, filename), 'utf8'));
-            return (0, github_1.addFileChange)(filename, JSON.stringify({ name, dependencies, devDependencies }, null, 2));
-        }));
-    }
-    core.debug(`Files to be published`);
-    core.debug(JSON.stringify(files, null, 2));
-    const skipPublish = core.getBooleanInput('skip_publish');
-    if (skipPublish) {
-        core.info('Skipping publish of generated stackaid dependencies');
-    }
-    else {
-        yield (0, github_1.publishFiles)(`Update stackaid dependencies for ${owner}/${repo}`, files);
-    }
-});
-run();
-
-
-/***/ }),
-
-/***/ 6719:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createCommit = exports.getHeadOid = exports.getRepositoryDependencies = exports.getRepositorySummary = exports.graphql = exports.repositoryFragment = exports.summaryFragment = void 0;
-const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
-const graphql_tag_1 = __importDefault(__nccwpck_require__(8435));
-const constants_1 = __nccwpck_require__(9677);
-const utils_1 = __nccwpck_require__(7696);
-const graphql_1 = __nccwpck_require__(6155);
-const lodash_1 = __nccwpck_require__(250);
-exports.summaryFragment = (0, graphql_tag_1.default)(`
-  fragment summaryFragment on DependencyGraphManifestConnection {
-    edges	{
-      cursor
-      node {
-        id
-        filename
-      }
-    }
-  }
-`);
-exports.repositoryFragment = (0, graphql_tag_1.default)(`
-  fragment repositoryFragment on DependencyGraphManifestConnection {
-    nodes {
-      filename
-      dependencies {
-        nodes {
-          repository {
-            name
-            owner {
-              login
-            }
-            url
-          }
-          packageManager
-          requirements
-          packageName
-          hasDependencies
-        }
-      }
-    }
-  }
-`);
-const graphql = (query, variables) => __awaiter(void 0, void 0, void 0, function* () {
-    const token = core.getInput('token');
-    const octokit = github.getOctokit(token);
-    const result = yield octokit.graphql(Object.assign(Object.assign({}, variables), { query, headers: {
-            // Required for dependency graph queries, see:
-            // https://docs.github.com/en/graphql/overview/schema-previews#access-to-a-repositories-dependency-graph-preview
-            Accept: 'application/vnd.github.hawkgirl-preview+json',
-        }, request: { timeout: 60 * 1000 } }));
-    return result;
-});
-exports.graphql = graphql;
-const getRepositorySummaryPage = (owner, repo, cursor = '') => __awaiter(void 0, void 0, void 0, function* () {
-    const result = (yield (0, exports.graphql)(`
-      query getRepositorySummary(
-        $owner: String!
-        $repo: String!
-        $cursor: String
-      ) {
-        repository(owner: $owner, name: $repo) {
-          dependencyGraphManifests(
-            dependenciesFirst: 1
-            withDependencies: true
-            first: 100
-            after: $cursor
-          ) {
-            ...summaryFragment
-          }
-        }
-      }
-      ${(0, graphql_1.print)(exports.summaryFragment)}
-    `, { repo, owner, cursor }));
-    const { dependencyGraphManifests: { edges }, } = result.repository;
-    return edges;
-});
-const getRepositorySummary = (owner, repo, glob = '') => __awaiter(void 0, void 0, void 0, function* () {
-    let edges = yield getRepositorySummaryPage(owner, repo);
-    if (!edges.length) {
-        return [];
-    }
-    let { cursor } = edges[edges.length - 1];
-    while (cursor) {
-        edges = [...edges, ...(yield getRepositorySummaryPage(owner, repo, cursor))];
-        const next = edges[edges.length - 1].cursor;
-        cursor = next !== cursor ? next : '';
-    }
-    const relevant = edges
-        .map((edge, i) => (Object.assign(Object.assign({}, edge), { after: i > 0 ? edges[i - 1].cursor : undefined })))
-        .filter((edge) => (0, utils_1.matches)(edge.node.filename, constants_1.SUMMARY_FILE_TYPES, glob));
-    return relevant;
-});
-exports.getRepositorySummary = getRepositorySummary;
-const getRepositoryDependencies = (owner, repo, first, after) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = (yield (0, exports.graphql)(`
-      query getRepositoryDependencies(
-        $owner: String!
-        $repo: String!
-        $first: Int
-        $after: String
-      ) {
-        repository(owner: $owner, name: $repo) {
-          dependencyGraphManifests(
-            dependenciesFirst: 1
-            withDependencies: true
-            first: $first
-            after: $after
-          ) {
-            ...repositoryFragment
-          }
-        }
-      }
-      ${(0, graphql_1.print)(exports.repositoryFragment)}
-    `, { repo, owner, first, after }));
-    const { dependencyGraphManifests: { nodes }, } = result.repository;
-    const dependencies = (0, lodash_1.uniqBy)(nodes
-        .filter((n) => (0, utils_1.matches)(n.filename, constants_1.DEPENDENCY_FILE_TYPES))
-        .flatMap((n) => n.dependencies.nodes)
-        .filter((d) => { var _a; return (_a = d.repository) === null || _a === void 0 ? void 0 : _a.url; }), (d) => d.repository.url);
-    return dependencies;
-});
-exports.getRepositoryDependencies = getRepositoryDependencies;
-const getHeadOid = (owner, repo) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = (yield (0, exports.graphql)(`
-      query getHeadOid($owner: String!, $repo: String!) {
-        repository(owner: $owner, name: $repo) {
-          defaultBranchRef {
-            name
-            target {
-              ... on Commit {
-                history(first: 1) {
-                  nodes {
-                    oid
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    `, { owner, repo }));
-    const { name, target } = result.repository.defaultBranchRef;
-    return { name, oid: target.history.nodes[0].oid };
-});
-exports.getHeadOid = getHeadOid;
-const createCommit = (owner, repo, input) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name: branchName, oid } = yield (0, exports.getHeadOid)(owner, repo);
-    const result = (yield (0, exports.graphql)(`
-      mutation createCommit($input: CreateCommitOnBranchInput!) {
-        createCommitOnBranch(input: $input) {
-          commit {
-            url
-          }
-        }
-      }
-    `, {
-        input: Object.assign({ branch: {
-                repositoryNameWithOwner: `${owner}/${repo}`,
-                branchName,
-            }, expectedHeadOid: oid }, input),
-    }));
-    return result.createCommitOnBranch;
-});
-exports.createCommit = createCommit;
-
-
-/***/ }),
-
-/***/ 7696:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.matches = void 0;
-const minimatch_1 = __importDefault(__nccwpck_require__(3973));
-const matches = (file, fileTypes, glob = '') => (0, minimatch_1.default)(file.toLowerCase(), `${glob}*(${fileTypes.join('|')})`);
-exports.matches = matches;
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -5542,7 +4996,7 @@ exports.GraphQLError = void 0;
 exports.formatError = formatError;
 exports.printError = printError;
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _location = __nccwpck_require__(1922);
 
@@ -6190,7 +5644,7 @@ var _invariant = __nccwpck_require__(8847);
 
 var _isIterableObject = __nccwpck_require__(1258);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _isPromise = __nccwpck_require__(3910);
 
@@ -9749,7 +9203,7 @@ function isIterableObject(maybeIterable) {
 
 /***/ }),
 
-/***/ 681:
+/***/ 5865:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -15237,7 +14691,7 @@ var _inspect = __nccwpck_require__(102);
 
 var _instanceOf = __nccwpck_require__(3481);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _keyMap = __nccwpck_require__(711);
 
@@ -16540,7 +15994,7 @@ var _inspect = __nccwpck_require__(102);
 
 var _instanceOf = __nccwpck_require__(3481);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _toObjMap = __nccwpck_require__(4728);
 
@@ -17947,7 +17401,7 @@ exports.specifiedScalarTypes = void 0;
 
 var _inspect = __nccwpck_require__(102);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _GraphQLError = __nccwpck_require__(4797);
 
@@ -18321,7 +17775,7 @@ var _inspect = __nccwpck_require__(102);
 
 var _instanceOf = __nccwpck_require__(3481);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _toObjMap = __nccwpck_require__(4728);
 
@@ -19898,7 +19352,7 @@ var _invariant = __nccwpck_require__(8847);
 
 var _isIterableObject = __nccwpck_require__(1258);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _kinds = __nccwpck_require__(1927);
 
@@ -20217,7 +19671,7 @@ var _devAssert = __nccwpck_require__(6514);
 
 var _inspect = __nccwpck_require__(102);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _keyValMap = __nccwpck_require__(9268);
 
@@ -20615,7 +20069,7 @@ var _invariant = __nccwpck_require__(8847);
 
 var _isIterableObject = __nccwpck_require__(1258);
 
-var _isObjectLike = __nccwpck_require__(681);
+var _isObjectLike = __nccwpck_require__(5865);
 
 var _Path = __nccwpck_require__(1262);
 
@@ -52350,6 +51804,632 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 7672:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sourceDir = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github_1 = __nccwpck_require__(978);
+const _1 = __nccwpck_require__(6144);
+exports.sourceDir = core.getInput('src_dir') || process.cwd();
+const run = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const owner = process.env.GITHUB_REPOSITORY_OWNER;
+    const repo = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/', 2)[1];
+    const token = core.getInput('token');
+    const { stackAidJson, packageJson } = yield (0, _1.getDependencies)({
+        owner,
+        repo,
+        token,
+        sourceDir: exports.sourceDir,
+    });
+    // Make file available to subsequent actions
+    core.setOutput('stackaid_json', stackAidJson);
+    // Create list of files for commit
+    const files = [];
+    if (stackAidJson.dependencies.length > 0) {
+        files.push((0, github_1.addFileChange)('stackaid.json', JSON.stringify(stackAidJson, null, 2)));
+    }
+    const includePackageJson = core.getBooleanInput('include_package_json');
+    if (includePackageJson && !github_1.isSamePublishRepo) {
+        // Read each file and only pull out relevant fields
+        files.push(...packageJson.map((_a) => {
+            var { filename } = _a, contents = __rest(_a, ["filename"]);
+            return (0, github_1.addFileChange)(filename, JSON.stringify(contents, null, 2));
+        }));
+    }
+    core.debug(`Files to be published`);
+    core.debug(JSON.stringify(files, null, 2));
+    const skipPublish = core.getBooleanInput('skip_publish');
+    if (skipPublish) {
+        core.info('Skipping publish of generated stackaid dependencies');
+    }
+    else {
+        yield (0, github_1.publishFiles)(token, `Update stackaid dependencies for ${owner}/${repo}`, files);
+    }
+});
+run();
+
+
+/***/ }),
+
+/***/ 9042:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEPENDENCY_FILE_TYPES = exports.SUMMARY_FILE_TYPES = exports.FileTypes = exports.GITHUB_DOMAIN = void 0;
+exports.GITHUB_DOMAIN = 'github.com';
+exports.FileTypes = {
+    go: ['go.mod'],
+    java: ['pom.xml'],
+    javascript: ['package.json'],
+    php: ['composer.json'],
+    python: ['pipfile', 'pyproject.toml', 'setup.py'],
+    ruby: ['gemfile'],
+    rust: ['cargo.toml'],
+};
+exports.SUMMARY_FILE_TYPES = Object.values(exports.FileTypes).flat();
+exports.DEPENDENCY_FILE_TYPES = [
+    exports.FileTypes.java,
+    exports.FileTypes.php,
+    exports.FileTypes.python,
+    exports.FileTypes.ruby,
+    exports.FileTypes.rust,
+].flat();
+
+
+/***/ }),
+
+/***/ 978:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.addFileChange = exports.publishFiles = exports.isSamePublishRepo = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github_1 = __nccwpck_require__(5438);
+const queries_1 = __nccwpck_require__(2840);
+exports.isSamePublishRepo = core.getInput('publish_repo').toLowerCase() ===
+    `${github_1.context.repo.owner.toLowerCase()}/${github_1.context.repo.repo.toLowerCase()}`;
+const publishFiles = (token, message, files) => __awaiter(void 0, void 0, void 0, function* () {
+    const [publishOwner, publishRepo] = core
+        .getInput('publish_repo')
+        .split('/', 2);
+    yield (0, queries_1.getClient)(token).createCommit(publishOwner, publishRepo, {
+        message: {
+            headline: message,
+            body: '',
+        },
+        fileChanges: {
+            additions: files,
+            deletions: [],
+        },
+    });
+});
+exports.publishFiles = publishFiles;
+const addFileChange = (path, contents) => {
+    const publishPath = core.getInput('publish_path');
+    if (publishPath) {
+        path = `${publishPath}/${path}`;
+    }
+    return { path, contents: Buffer.from(contents).toString('base64') };
+};
+exports.addFileChange = addFileChange;
+
+
+/***/ }),
+
+/***/ 606:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getDependencies = exports.getModuleGraph = exports.listDirectDeps = void 0;
+const path_1 = __importDefault(__nccwpck_require__(1017));
+const constants_1 = __nccwpck_require__(9042);
+const child_process_1 = __nccwpck_require__(2081);
+const lodash_1 = __nccwpck_require__(250);
+const filterDependency = (line) => line.startsWith(constants_1.GITHUB_DOMAIN);
+const parseDependency = (line) => {
+    switch (true) {
+        case line.startsWith(constants_1.GITHUB_DOMAIN):
+            const [domain, owner, repo] = line.split('/');
+            return `https://${domain}/${owner}/${repo}`;
+        default:
+            return;
+    }
+};
+const parseModuleUrl = (m) => {
+    const [url, version = ''] = m.split('@');
+    const [domain, owner, repo] = url.split('/');
+    return { module: [domain, owner, repo].join('/'), version };
+};
+const listDirectDeps = (dir, sourceDir) => {
+    let output = (0, child_process_1.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: path_1.default.resolve(sourceDir, dir) }).toString();
+    return output
+        .split('\n')
+        .map((d) => {
+        const [module, version = ''] = d.split(' ');
+        return { module, version };
+    })
+        .filter((entry) => filterDependency(entry.module));
+};
+exports.listDirectDeps = listDirectDeps;
+const getModuleGraph = (dir, sourceDir) => {
+    const output = (0, child_process_1.execSync)(`go mod graph`, {
+        cwd: path_1.default.resolve(sourceDir, dir),
+    }).toString();
+    const graph = {};
+    output.split('\n').forEach((line) => {
+        if (!line) {
+            return;
+        }
+        const [parent, child] = line.split(' ');
+        const mod = parseModuleUrl(parent);
+        const childMod = parseModuleUrl(child);
+        const key = `${mod.module}@${mod.version}`;
+        graph[key] = graph[key] || [];
+        if (childMod.module !== key) {
+            graph[key].push(childMod);
+        }
+    });
+    Object.entries(graph).forEach(([key, deps]) => {
+        graph[key] = (0, lodash_1.uniqBy)(deps, 'module');
+    });
+    return graph;
+};
+exports.getModuleGraph = getModuleGraph;
+const getDependencies = (dir = '', sourceDir = process.cwd()) => {
+    const graph = (0, exports.getModuleGraph)(dir, sourceDir);
+    const direct = (0, exports.listDirectDeps)(dir, sourceDir);
+    let dependencies = direct
+        .filter((d) => filterDependency(d.module))
+        .map((d) => {
+        const url = parseModuleUrl(d.module).module;
+        const deps = graph[`${url}@${d.version}`] || [];
+        return {
+            source: parseDependency(d.module),
+            dependencies: deps
+                .filter((d) => filterDependency(d.module))
+                .map((d) => ({
+                source: parseDependency(d.module),
+            })),
+        };
+    });
+    return dependencies;
+};
+exports.getDependencies = getDependencies;
+
+
+/***/ }),
+
+/***/ 6144:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getDependencies = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const path_1 = __importDefault(__nccwpck_require__(1017));
+const constants_1 = __nccwpck_require__(9042);
+const queries_1 = __nccwpck_require__(2840);
+const go_1 = __nccwpck_require__(606);
+const utils_1 = __nccwpck_require__(1314);
+const fs_1 = __nccwpck_require__(7147);
+const lodash_1 = __nccwpck_require__(250);
+const getDependencies = (config) => __awaiter(void 0, void 0, void 0, function* () {
+    const { owner, repo, token, sourceDir } = config;
+    const packageJson = [];
+    const stackAidJson = { version: 1, dependencies: [] };
+    let direct = [];
+    const client = (0, queries_1.getClient)(token);
+    const summary = yield client.getRepositorySummary(owner, repo, '**/');
+    for (const { after, node: { filename }, } of summary) {
+        switch (true) {
+            case (0, utils_1.isFileType)(filename, constants_1.FileTypes.go): {
+                core.info(`Found ${filename}, getting Go dependencies`);
+                const parent = `https://${constants_1.GITHUB_DOMAIN}/${owner}/${repo}`;
+                const deps = (0, go_1.getDependencies)(path_1.default.dirname(filename), sourceDir).filter(({ source }) => source !== parent);
+                stackAidJson.dependencies.push(...deps);
+                break;
+            }
+            case (0, utils_1.isFileType)(filename, constants_1.FileTypes.javascript): {
+                core.info(`Found ${filename}, copying dependencies`);
+                const { dependencies, devDependencies } = JSON.parse((0, fs_1.readFileSync)(path_1.default.resolve(sourceDir, filename), 'utf8'));
+                packageJson.push({ filename, dependencies, devDependencies });
+            }
+            default:
+                direct.push(...(yield client.getRepositoryDependencies(owner, repo, 1, after)));
+                break;
+        }
+    }
+    // We need to query each direct dependency separately since the graphql API
+    // does NOT support nested dependencies.
+    direct = (0, lodash_1.uniqBy)(direct, (d) => d.repository.url);
+    for (const dep of direct) {
+        const { url: source, name, owner: { login: owner }, } = dep.repository;
+        const summary = yield client.getRepositorySummary(owner, name);
+        core.info(`${owner}/${name}: ${summary.map((s) => s.node.filename)}`);
+        let indirect = [];
+        for (const { after } of summary) {
+            const deps = yield client.getRepositoryDependencies(owner, name, 1, after);
+            indirect.push(...deps.map((d) => ({ source: d.repository.url })));
+        }
+        // Dependencies shouldn't be funding themselves.
+        indirect = indirect.filter((d) => d.source !== source);
+        stackAidJson.dependencies.push({
+            source,
+            dependencies: (0, lodash_1.uniqBy)(indirect, 'source'),
+        });
+    }
+    return { stackAidJson, packageJson };
+});
+exports.getDependencies = getDependencies;
+
+
+/***/ }),
+
+/***/ 2840:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getClient = exports.repositoryFragment = exports.summaryFragment = void 0;
+const github = __importStar(__nccwpck_require__(5438));
+const graphql_tag_1 = __importDefault(__nccwpck_require__(8435));
+const constants_1 = __nccwpck_require__(9042);
+const utils_1 = __nccwpck_require__(1314);
+const graphql_1 = __nccwpck_require__(6155);
+const lodash_1 = __nccwpck_require__(250);
+exports.summaryFragment = (0, graphql_tag_1.default)(`
+  fragment summaryFragment on DependencyGraphManifestConnection {
+    edges	{
+      cursor
+      node {
+        id
+        filename
+      }
+    }
+  }
+`);
+exports.repositoryFragment = (0, graphql_tag_1.default)(`
+  fragment repositoryFragment on DependencyGraphManifestConnection {
+    nodes {
+      filename
+      dependencies {
+        nodes {
+          repository {
+            name
+            owner {
+              login
+            }
+            url
+          }
+          packageManager
+          requirements
+          packageName
+          hasDependencies
+        }
+      }
+    }
+  }
+`);
+const getClient = (token) => {
+    return {
+        octokit: github.getOctokit(token),
+        graphql(query, variables) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const result = yield this.octokit.graphql(Object.assign(Object.assign({}, variables), { query, headers: {
+                        // Required for dependency graph queries, see:
+                        // https://docs.github.com/en/graphql/overview/schema-previews#access-to-a-repositories-dependency-graph-preview
+                        Accept: 'application/vnd.github.hawkgirl-preview+json',
+                    }, request: { timeout: 60 * 1000 } }));
+                return result;
+            });
+        },
+        getRepositorySummaryPage(owner, repo, cursor = '') {
+            return __awaiter(this, void 0, void 0, function* () {
+                const result = (yield this.graphql(`
+          query getRepositorySummary(
+            $owner: String!
+            $repo: String!
+            $cursor: String
+          ) {
+            repository(owner: $owner, name: $repo) {
+              dependencyGraphManifests(
+                dependenciesFirst: 1
+                withDependencies: true
+                first: 100
+                after: $cursor
+              ) {
+                ...summaryFragment
+              }
+            }
+          }
+          ${(0, graphql_1.print)(exports.summaryFragment)}
+        `, { repo, owner, cursor }));
+                const { dependencyGraphManifests: { edges }, } = result.repository;
+                return edges;
+            });
+        },
+        getRepositorySummary(owner, repo, glob = '') {
+            return __awaiter(this, void 0, void 0, function* () {
+                let edges = yield this.getRepositorySummaryPage(owner, repo);
+                if (!edges.length) {
+                    return [];
+                }
+                let { cursor } = edges[edges.length - 1];
+                while (cursor) {
+                    edges = [
+                        ...edges,
+                        ...(yield this.getRepositorySummaryPage(owner, repo, cursor)),
+                    ];
+                    const next = edges[edges.length - 1].cursor;
+                    cursor = next !== cursor ? next : '';
+                }
+                const relevant = edges
+                    .map((edge, i) => (Object.assign(Object.assign({}, edge), { after: i > 0 ? edges[i - 1].cursor : undefined })))
+                    .filter((edge) => (0, utils_1.matches)(edge.node.filename, constants_1.SUMMARY_FILE_TYPES, glob));
+                return relevant;
+            });
+        },
+        getRepositoryDependencies(owner, repo, first, after) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const result = (yield this.graphql(`
+          query getRepositoryDependencies(
+            $owner: String!
+            $repo: String!
+            $first: Int
+            $after: String
+          ) {
+            repository(owner: $owner, name: $repo) {
+              dependencyGraphManifests(
+                dependenciesFirst: 1
+                withDependencies: true
+                first: $first
+                after: $after
+              ) {
+                ...repositoryFragment
+              }
+            }
+          }
+          ${(0, graphql_1.print)(exports.repositoryFragment)}
+        `, { repo, owner, first, after }));
+                const { dependencyGraphManifests: { nodes }, } = result.repository;
+                const dependencies = (0, lodash_1.uniqBy)(nodes
+                    .filter((n) => (0, utils_1.matches)(n.filename, constants_1.DEPENDENCY_FILE_TYPES))
+                    .flatMap((n) => n.dependencies.nodes)
+                    .filter((d) => { var _a; return (_a = d.repository) === null || _a === void 0 ? void 0 : _a.url; }), (d) => d.repository.url);
+                return dependencies;
+            });
+        },
+        getHeadOid(owner, repo) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const result = (yield this.graphql(`
+          query getHeadOid($owner: String!, $repo: String!) {
+            repository(owner: $owner, name: $repo) {
+              defaultBranchRef {
+                name
+                target {
+                  ... on Commit {
+                    history(first: 1) {
+                      nodes {
+                        oid
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `, { owner, repo }));
+                const { name, target } = result.repository.defaultBranchRef;
+                return { name, oid: target.history.nodes[0].oid };
+            });
+        },
+        createCommit(owner, repo, input) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const { name: branchName, oid } = yield this.getHeadOid(owner, repo);
+                const result = (yield this.graphql(`
+          mutation createCommit($input: CreateCommitOnBranchInput!) {
+            createCommitOnBranch(input: $input) {
+              commit {
+                url
+              }
+            }
+          }
+        `, {
+                    input: Object.assign({ branch: {
+                            repositoryNameWithOwner: `${owner}/${repo}`,
+                            branchName,
+                        }, expectedHeadOid: oid }, input),
+                }));
+                return result.createCommitOnBranch;
+            });
+        },
+    };
+};
+exports.getClient = getClient;
+
+
+/***/ }),
+
+/***/ 1314:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isFileType = exports.matches = void 0;
+const minimatch_1 = __importDefault(__nccwpck_require__(3973));
+const matches = (file, fileTypes, glob = '') => (0, minimatch_1.default)(file.toLowerCase(), `${glob}*(${fileTypes.join('|')})`);
+exports.matches = matches;
+const isFileType = (filename, fileType) => (0, exports.matches)(filename, fileType, '**/');
+exports.isFileType = isFileType;
+
+
+/***/ }),
+
 /***/ 2877:
 /***/ ((module) => {
 
@@ -52548,7 +52628,7 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(9536);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(7672);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()
