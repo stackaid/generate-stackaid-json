@@ -30,7 +30,7 @@ outputs:
     description: 'The generated stackaid.json file'
 runs:
   using: 'node16'
-  main: 'dist/index.js'
+  main: 'dist/action.js'
 branding:
   icon: 'layers'
   color: 'orange'
