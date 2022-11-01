@@ -1,36 +1,13 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+// src/action.ts
+import * as core3 from "@actions/core";
 
-// src/index.ts
-var src_exports = {};
-__export(src_exports, {
-  getDependencies: () => getDependencies2
-});
-module.exports = __toCommonJS(src_exports);
-var core = __toESM(require("@actions/core"));
-var import_path2 = __toESM(require("path"));
+// src/github.ts
+import * as core from "@actions/core";
+import { context } from "@actions/github";
+
+// src/queries.ts
+import * as github from "@actions/github";
+import gql from "graphql-tag";
 
 // src/constants.ts
 var GITHUB_DOMAIN = "github.com";
@@ -52,19 +29,15 @@ var DEPENDENCY_FILE_TYPES = [
   FileTypes.rust
 ].flat();
 
-// src/queries.ts
-var github = __toESM(require("@actions/github"));
-var import_graphql_tag = __toESM(require("graphql-tag"));
-
 // src/utils.ts
-var import_minimatch = __toESM(require("minimatch"));
-var matches = (file, fileTypes, glob = "") => (0, import_minimatch.default)(file.toLowerCase(), `${glob}*(${fileTypes.join("|")})`);
+import minimatch from "minimatch";
+var matches = (file, fileTypes, glob = "") => minimatch(file.toLowerCase(), `${glob}*(${fileTypes.join("|")})`);
 var isFileType = (filename, fileType) => matches(filename, fileType, "**/");
 
 // src/queries.ts
-var import_graphql = require("graphql");
-var import_lodash = require("lodash");
-var summaryFragment = (0, import_graphql_tag.default)(`
+import { print } from "graphql";
+import { uniqBy } from "lodash";
+var summaryFragment = gql(`
   fragment summaryFragment on DependencyGraphManifestConnection {
     edges	{
       cursor
@@ -75,7 +48,7 @@ var summaryFragment = (0, import_graphql_tag.default)(`
     }
   }
 `);
-var repositoryFragment = (0, import_graphql_tag.default)(`
+var repositoryFragment = gql(`
   fragment repositoryFragment on DependencyGraphManifestConnection {
     nodes {
       filename
@@ -130,7 +103,7 @@ var getClient = (token) => {
               }
             }
           }
-          ${(0, import_graphql.print)(summaryFragment)}
+          ${print(summaryFragment)}
         `,
         { repo, owner, cursor }
       );
@@ -179,14 +152,14 @@ var getClient = (token) => {
               }
             }
           }
-          ${(0, import_graphql.print)(repositoryFragment)}
+          ${print(repositoryFragment)}
         `,
         { repo, owner, first, after }
       );
       const {
         dependencyGraphManifests: { nodes }
       } = result.repository;
-      const dependencies = (0, import_lodash.uniqBy)(
+      const dependencies = uniqBy(
         nodes.filter((n) => matches(n.filename, DEPENDENCY_FILE_TYPES)).flatMap((n) => n.dependencies.nodes).filter((d) => {
           var _a;
           return (_a = d.repository) == null ? void 0 : _a.url;
@@ -248,10 +221,37 @@ var getClient = (token) => {
   };
 };
 
+// src/github.ts
+var isSamePublishRepo = core.getInput("publish_repo").toLowerCase() === `${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}`;
+var publishFiles = async (token, message, files) => {
+  const [publishOwner, publishRepo] = core.getInput("publish_repo").split("/", 2);
+  await getClient(token).createCommit(publishOwner, publishRepo, {
+    message: {
+      headline: message,
+      body: ""
+    },
+    fileChanges: {
+      additions: files,
+      deletions: []
+    }
+  });
+};
+var addFileChange = (path3, contents) => {
+  const publishPath = core.getInput("publish_path");
+  if (publishPath) {
+    path3 = `${publishPath}/${path3}`;
+  }
+  return { path: path3, contents: Buffer.from(contents).toString("base64") };
+};
+
+// src/index.ts
+import * as core2 from "@actions/core";
+import path2 from "path";
+
 // src/go.ts
-var import_path = __toESM(require("path"));
-var import_child_process = require("child_process");
-var import_lodash2 = require("lodash");
+import path from "path";
+import { execSync } from "child_process";
+import { uniqBy as uniqBy2 } from "lodash";
 var filterDependency = (line) => line.startsWith(GITHUB_DOMAIN);
 var parseDependency = (line) => {
   switch (true) {
@@ -267,19 +267,19 @@ var parseModuleUrl = (m) => {
   const [domain, owner, repo] = url.split("/");
   return { module: [domain, owner, repo].join("/"), version };
 };
-var listDirectDeps = (dir, sourceDir) => {
-  let output = (0, import_child_process.execSync)(
+var listDirectDeps = (dir, sourceDir2) => {
+  let output = execSync(
     `go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`,
-    { cwd: import_path.default.resolve(sourceDir, dir) }
+    { cwd: path.resolve(sourceDir2, dir) }
   ).toString();
   return output.split("\n").map((d) => {
-    const [module2, version = ""] = d.split(" ");
-    return { module: module2, version };
+    const [module, version = ""] = d.split(" ");
+    return { module, version };
   }).filter((entry) => filterDependency(entry.module));
 };
-var getModuleGraph = (dir, sourceDir) => {
-  const output = (0, import_child_process.execSync)(`go mod graph`, {
-    cwd: import_path.default.resolve(sourceDir, dir)
+var getModuleGraph = (dir, sourceDir2) => {
+  const output = execSync(`go mod graph`, {
+    cwd: path.resolve(sourceDir2, dir)
   }).toString();
   const graph = {};
   output.split("\n").forEach((line) => {
@@ -296,13 +296,13 @@ var getModuleGraph = (dir, sourceDir) => {
     }
   });
   Object.entries(graph).forEach(([key, deps]) => {
-    graph[key] = (0, import_lodash2.uniqBy)(deps, "module");
+    graph[key] = uniqBy2(deps, "module");
   });
   return graph;
 };
-var getDependencies = (dir = "", sourceDir = process.cwd()) => {
-  const graph = getModuleGraph(dir, sourceDir);
-  const direct = listDirectDeps(dir, sourceDir);
+var getDependencies = (dir = "", sourceDir2 = process.cwd()) => {
+  const graph = getModuleGraph(dir, sourceDir2);
+  const direct = listDirectDeps(dir, sourceDir2);
   let dependencies = direct.filter((d) => filterDependency(d.module)).map((d) => {
     const url = parseModuleUrl(d.module).module;
     const deps = graph[`${url}@${d.version}`] || [];
@@ -317,10 +317,10 @@ var getDependencies = (dir = "", sourceDir = process.cwd()) => {
 };
 
 // src/index.ts
-var import_fs = require("fs");
-var import_lodash3 = require("lodash");
+import { readFileSync } from "fs";
+import { uniqBy as uniqBy3 } from "lodash";
 var getDependencies2 = async (config) => {
-  const { owner, repo, token, sourceDir } = config;
+  const { owner, repo, token, sourceDir: sourceDir2 } = config;
   const packageJson = [];
   const stackAidJson = { version: 1, dependencies: [] };
   let direct = [];
@@ -332,19 +332,19 @@ var getDependencies2 = async (config) => {
   } of summary) {
     switch (true) {
       case isFileType(filename, FileTypes.go): {
-        core.info(`Found ${filename}, getting Go dependencies`);
+        core2.info(`Found ${filename}, getting Go dependencies`);
         const parent = `https://${GITHUB_DOMAIN}/${owner}/${repo}`;
         const deps = getDependencies(
-          import_path2.default.dirname(filename),
-          sourceDir
+          path2.dirname(filename),
+          sourceDir2
         ).filter(({ source }) => source !== parent);
         stackAidJson.dependencies.push(...deps);
         break;
       }
       case isFileType(filename, FileTypes.javascript): {
-        core.info(`Found ${filename}, copying dependencies`);
+        core2.info(`Found ${filename}, copying dependencies`);
         const { dependencies, devDependencies } = JSON.parse(
-          (0, import_fs.readFileSync)(import_path2.default.resolve(sourceDir, filename), "utf8")
+          readFileSync(path2.resolve(sourceDir2, filename), "utf8")
         );
         packageJson.push({ filename, dependencies, devDependencies });
       }
@@ -355,7 +355,7 @@ var getDependencies2 = async (config) => {
         break;
     }
   }
-  direct = (0, import_lodash3.uniqBy)(direct, (d) => d.repository.url);
+  direct = uniqBy3(direct, (d) => d.repository.url);
   for (const dep of direct) {
     const {
       url: source,
@@ -363,7 +363,7 @@ var getDependencies2 = async (config) => {
       owner: { login: owner2 }
     } = dep.repository;
     const summary2 = await client.getRepositorySummary(owner2, name);
-    core.info(`${owner2}/${name}: ${summary2.map((s) => s.node.filename)}`);
+    core2.info(`${owner2}/${name}: ${summary2.map((s) => s.node.filename)}`);
     let indirect = [];
     for (const { after } of summary2) {
       const deps = await client.getRepositoryDependencies(owner2, name, 1, after);
@@ -372,13 +372,55 @@ var getDependencies2 = async (config) => {
     indirect = indirect.filter((d) => d.source !== source);
     stackAidJson.dependencies.push({
       source,
-      dependencies: (0, import_lodash3.uniqBy)(indirect, "source")
+      dependencies: uniqBy3(indirect, "source")
     });
   }
   return { stackAidJson, packageJson };
 };
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  getDependencies
-});
-//# sourceMappingURL=index.js.map
+
+// src/action.ts
+var sourceDir = core3.getInput("src_dir") || process.cwd();
+var run = async () => {
+  var _a;
+  const owner = process.env.GITHUB_REPOSITORY_OWNER;
+  const repo = (_a = process.env.GITHUB_REPOSITORY) == null ? void 0 : _a.split("/", 2)[1];
+  const token = core3.getInput("token");
+  const { stackAidJson, packageJson } = await getDependencies2({
+    owner,
+    repo,
+    token,
+    sourceDir
+  });
+  core3.setOutput("stackaid_json", stackAidJson);
+  const files = [];
+  if (stackAidJson.dependencies.length > 0) {
+    files.push(
+      addFileChange("stackaid.json", JSON.stringify(stackAidJson, null, 2))
+    );
+  }
+  const includePackageJson = core3.getBooleanInput("include_package_json");
+  if (includePackageJson && !isSamePublishRepo) {
+    files.push(
+      ...packageJson.map(({ filename, ...contents }) => {
+        return addFileChange(filename, JSON.stringify(contents, null, 2));
+      })
+    );
+  }
+  core3.debug(`Files to be published`);
+  core3.debug(JSON.stringify(files, null, 2));
+  const skipPublish = core3.getBooleanInput("skip_publish");
+  if (skipPublish) {
+    core3.info("Skipping publish of generated stackaid dependencies");
+  } else {
+    await publishFiles(
+      token,
+      `Update stackaid dependencies for ${owner}/${repo}`,
+      files
+    );
+  }
+};
+run();
+export {
+  sourceDir
+};
+//# sourceMappingURL=action.mjs.map
