@@ -1,6 +1,15 @@
 export const GITHUB_DOMAIN = 'github.com'
 
-export const FileTypes = {
+export type Ecosystem =
+  | 'go'
+  | 'java'
+  | 'javascript'
+  | 'php'
+  | 'python'
+  | 'ruby'
+  | 'rust'
+
+export const FileTypes: Record<Ecosystem, string[]> = {
   go: ['go.mod'],
   java: ['pom.xml'],
   javascript: ['package.json'],

@@ -1,22 +1,23 @@
 import * as core from '@actions/core'
-import { FileAddition } from '../types/graphql'
+import { FileAddition } from './types/graphql.js'
+import { Octokit } from 'octokit'
 import { context } from '@actions/github'
-import { getClient } from './queries'
+import { getClient } from './queries.js'
 
 export const isSamePublishRepo =
   core.getInput('publish_repo').toLowerCase() ===
   `${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}`
 
 export const publishFiles = async (
-  token: string,
+  octokit: Octokit,
   message: string,
   files: FileAddition[]
 ) => {
   const [publishOwner, publishRepo] = core
     .getInput('publish_repo')
-    .split('/', 2)
+    .split('/', 2) as [string, string]
 
-  await getClient(token).createCommit(publishOwner, publishRepo, {
+  await getClient(octokit).createCommit(publishOwner, publishRepo, {
     message: {
       headline: message,
       body: '',

@@ -1,7 +1,8 @@
 import * as core from '@actions/core'
-import { FileAddition } from '../types/graphql'
-import { addFileChange, isSamePublishRepo, publishFiles } from './github'
-import { getDependencies } from '.'
+import { FileAddition } from './types/graphql.js'
+import { Octokit } from 'octokit'
+import { addFileChange, isSamePublishRepo, publishFiles } from './github.js'
+import { getDependencies } from './index.js'
 
 export const sourceDir = core.getInput('src_dir') || process.cwd()
 
@@ -9,11 +10,12 @@ const run = async () => {
   const owner = process.env.GITHUB_REPOSITORY_OWNER as string
   const repo = process.env.GITHUB_REPOSITORY?.split('/', 2)[1] as string
   const token = core.getInput('token')
+  const octokit = new Octokit({ auth: token })
 
   const { stackAidJson, packageJson } = await getDependencies({
     owner,
     repo,
-    token,
+    octokit,
     sourceDir,
   })
 
@@ -22,7 +24,7 @@ const run = async () => {
 
   // Create list of files for commit
   const files: FileAddition[] = []
-  if (stackAidJson.dependencies.length > 0) {
+  if (stackAidJson && stackAidJson.dependencies.length > 0) {
     files.push(
       addFileChange('stackaid.json', JSON.stringify(stackAidJson, null, 2))
     )
@@ -46,7 +48,7 @@ const run = async () => {
     core.info('Skipping publish of generated stackaid dependencies')
   } else {
     await publishFiles(
-      token,
+      octokit,
       `Update stackaid dependencies for ${owner}/${repo}`,
       files
     )

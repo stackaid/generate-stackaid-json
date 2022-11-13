@@ -1,12 +1,12 @@
 {
   "extends": "@sindresorhus/tsconfig",
   "compilerOptions": {
-    "outDir": "dist/esm", 
-    "module": "esnext",
-    "target": "esnext",
+    "module": "commonjs",
+    "target": "es2015",
+    "outDir": "dist/cjs", 
     "noImplicitAny": true,
     "esModuleInterop": true,
-    "noPropertyAccessFromIndexSignature": false,
+    "noPropertyAccessFromIndexSignature": false
   },
   "include": [
     "src/index.ts",

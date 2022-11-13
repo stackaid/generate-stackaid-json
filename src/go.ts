@@ -1,8 +1,10 @@
+import lodash from 'lodash'
 import path from 'path'
-import { GITHUB_DOMAIN } from './constants'
+import { GITHUB_DOMAIN } from './constants.js'
+import { StackAidDependency } from './types/index.js'
 import { execSync } from 'child_process'
-import { uniqBy } from 'lodash'
 
+const { uniqBy } = lodash
 const filterDependency = (line: string) => line.startsWith(GITHUB_DOMAIN)
 
 const parseDependency = (line: string) => {
@@ -16,7 +18,7 @@ const parseDependency = (line: string) => {
 }
 
 const parseModuleUrl = (m: string) => {
-  const [url, version = ''] = m.split('@')
+  const [url, version = ''] = m.split('@') as [string, string]
   const [domain, owner, repo] = url.split('/')
 
   return { module: [domain, owner, repo].join('/'), version }
@@ -31,7 +33,7 @@ export const listDirectDeps = (dir: string, sourceDir: string) => {
   return output
     .split('\n')
     .map((d) => {
-      const [module, version = ''] = d.split(' ')
+      const [module, version = ''] = d.split(' ') as [string]
       return { module, version }
     })
     .filter((entry) => filterDependency(entry.module))
@@ -49,7 +51,7 @@ export const getModuleGraph = (dir: string, sourceDir: string) => {
       return
     }
 
-    const [parent, child] = line.split(' ')
+    const [parent, child] = line.split(' ') as [string, string]
     const mod = parseModuleUrl(parent)
     const childMod = parseModuleUrl(child)
 
@@ -57,7 +59,7 @@ export const getModuleGraph = (dir: string, sourceDir: string) => {
     graph[key] = graph[key] || []
 
     if (childMod.module !== key) {
-      graph[key].push(childMod)
+      graph[key]!.push(childMod)
     }
   })
 

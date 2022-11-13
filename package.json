@@ -1,12 +1,13 @@
 {
   "name": "@stackaid/stackaid-json-generator",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": false,
   "description": "Generate a stackaid.json file based on your repository's dependency graph",
-  "main": "index.js",
   "scripts": {
-    "build": "tsup ./src/index.ts --dts --sourcemap --format esm,cjs",
-    "build:action": "ncc build ./src/action.ts -o dist/action",
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc",
+    "build:cjs": "tsc -p tsconfig-cjs.json",
+    "build:action": "ncc build ./src/action.ts -o dist/action --target es2020",
     "release": "np",
     "clean": "del-cli dist",
     "test": "jest --passWithNoTests",
@@ -21,28 +22,20 @@
   },
   "author": "Wes Carr wescarr@gmail.com",
   "license": "ISC",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
   "files": [
-    "index.js",
-    "dist/index.js",
-    "dist/index.js.map",
-    "dist/index.mjs.map",
-    "dist/index.mjs.map",
-    "dist/index.d.ts",
-    "LICENSE",
-    "README.md"
+    "dist/esm/*",
+    "dist/cjs/*"
   ],
   "dependencies": {
     "@actions/core": "^1.9.1",
     "@actions/github": "^5.0.3",
-    "@vercel/ncc": "^0.34.0",
-    "del-cli": "^5.0.0",
     "graphql": "^16.6.0",
     "graphql-tag": "^2.12.6",
     "lodash": "^4.17.21",
     "minimatch": "^3.1.2",
-    "np": "^7.6.2",
-    "tsup": "^6.3.0"
+    "octokit": "^2.0.10"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "2.11.8",
@@ -51,12 +44,17 @@
     "@graphql-codegen/typescript-operations": "^2.5.3",
     "@graphql-codegen/typescript-resolvers": "2.7.3",
     "@octokit/graphql-schema": "^12.0.0",
+    "@sindresorhus/tsconfig": "^3.0.1",
     "@types/lodash": "^4.14.184",
     "@types/minimatch": "^5.1.1",
     "@types/node": "^18.7.13",
+    "@vercel/ncc": "^0.34.0",
+    "del-cli": "^5.0.0",
     "graphqurl": "^1.0.1",
     "jest": "^28.1.3",
+    "np": "^7.6.2",
     "ts-jest": "^28.0.8",
+    "tsup": "^6.3.0",
     "typescript": "^4.4.4"
   }
 }

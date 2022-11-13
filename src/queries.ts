@@ -1,6 +1,4 @@
-import * as github from '@actions/github'
-import gql from 'graphql-tag'
-import { DEPENDENCY_FILE_TYPES, SUMMARY_FILE_TYPES } from './constants'
+import lodash from 'lodash'
 import {
   Commit,
   CreateCommitMutation,
@@ -12,10 +10,14 @@ import {
   GetRepositoryDependenciesQueryVariables,
   GetRepositorySummaryQuery,
   GetRepositorySummaryQueryVariables,
-} from '../types/graphql'
-import { matches } from './utils'
+} from './types/graphql.js'
+import { DEPENDENCY_FILE_TYPES, SUMMARY_FILE_TYPES } from './constants.js'
+import { Octokit } from 'octokit'
+import { gql } from 'graphql-tag'
+import { matches } from './utils.js'
 import { print } from 'graphql'
-import { uniqBy } from 'lodash'
+
+const { uniqBy } = lodash
 
 export const summaryFragment = gql(`
   fragment summaryFragment on DependencyGraphManifestConnection {
@@ -52,11 +54,10 @@ export const repositoryFragment = gql(`
   }
 `)
 
-export const getClient = (token: string) => {
+export const getClient = (octokit: Octokit) => {
   return {
-    octokit: github.getOctokit(token),
     async graphql(query: string, variables?: Record<string, any>) {
-      const result = await this.octokit.graphql({
+      const result = await octokit.graphql({
         ...variables,
         query,
         headers: {
@@ -68,6 +69,21 @@ export const getClient = (token: string) => {
       })
 
       return result as any
+    },
+
+    async getFileContents(owner: string, repo: string, path: string) {
+      const res = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path,
+      })
+
+      if (res?.status !== 200) {
+        return null
+      }
+
+      const encodedContent: string = (res.data as any).content
+      return Buffer.from(encodedContent, 'base64').toString()
     },
 
     async getRepositorySummaryPage(
@@ -111,20 +127,20 @@ export const getClient = (token: string) => {
         return []
       }
 
-      let { cursor } = edges[edges.length - 1]
+      let { cursor } = edges[edges.length - 1]!
       while (cursor) {
         edges = [
           ...edges,
           ...(await this.getRepositorySummaryPage(owner, repo, cursor)),
         ]
-        const next = edges[edges.length - 1].cursor
+        const next = edges[edges.length - 1]!.cursor
         cursor = next !== cursor ? next : ''
       }
 
       const relevant = edges
         .map((edge, i) => ({
           ...edge,
-          after: i > 0 ? edges[i - 1].cursor : undefined,
+          after: i > 0 ? edges[i - 1]!.cursor : undefined,
         }))
         .filter((edge) => matches(edge.node.filename, SUMMARY_FILE_TYPES, glob))
 
@@ -200,7 +216,7 @@ export const getClient = (token: string) => {
       )) as GetHeadOidQuery
 
       const { name, target } = result.repository.defaultBranchRef
-      return { name, oid: (target as Commit).history.nodes[0].oid }
+      return { name, oid: (target as Commit).history.nodes[0]!.oid }
     },
 
     async createCommit(
