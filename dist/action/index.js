@@ -70944,9 +70944,15 @@ const getDependencies = (dir = '', sourceDir = process.cwd()) => {
 
 const { uniqBy: generate_uniqBy } = (lodash_default());
 const getJavaScriptDependencies = async ({ octokit, owner, repo, filename, }) => {
-    const content = await getClient(octokit).getFileContents(owner, repo, filename);
-    const { dependencies, devDependencies } = JSON.parse(content);
-    return { filename, dependencies, devDependencies };
+    try {
+        const content = await getClient(octokit).getFileContents(owner, repo, filename);
+        const { dependencies, devDependencies } = JSON.parse(content);
+        return { filename, dependencies, devDependencies };
+    }
+    catch (error) {
+        // File may not exist or not be valid JSON
+        return null;
+    }
 };
 const getGoDependencies = async ({ owner, repo, filename, sourceDir, }) => {
     const parent = `https://${GITHUB_DOMAIN}/${owner}/${repo}`;
@@ -71005,7 +71011,9 @@ const src_getDependencies = async (config, generatorTypes) => {
             case isFileType(filename, FileTypes.javascript): {
                 core.info(`Found ${filename}, copying dependencies`);
                 const deps = await generate.javascript({ ...config, filename });
-                packageJson.push(deps);
+                if (deps) {
+                    packageJson.push(deps);
+                }
                 break;
             }
             default:

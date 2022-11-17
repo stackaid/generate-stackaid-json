@@ -43,9 +43,15 @@ const constants_js_1 = require("./constants.js");
 const queries_js_1 = require("./queries.js");
 const { uniqBy } = lodash_1.default;
 const getJavaScriptDependencies = ({ octokit, owner, repo, filename, }) => __awaiter(void 0, void 0, void 0, function* () {
-    const content = yield (0, queries_js_1.getClient)(octokit).getFileContents(owner, repo, filename);
-    const { dependencies, devDependencies } = JSON.parse(content);
-    return { filename, dependencies, devDependencies };
+    try {
+        const content = yield (0, queries_js_1.getClient)(octokit).getFileContents(owner, repo, filename);
+        const { dependencies, devDependencies } = JSON.parse(content);
+        return { filename, dependencies, devDependencies };
+    }
+    catch (error) {
+        // File may not exist or not be valid JSON
+        return null;
+    }
 });
 const getGoDependencies = ({ owner, repo, filename, sourceDir, }) => __awaiter(void 0, void 0, void 0, function* () {
     const parent = `https://${constants_js_1.GITHUB_DOMAIN}/${owner}/${repo}`;

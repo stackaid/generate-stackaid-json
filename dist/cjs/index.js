@@ -58,7 +58,9 @@ const getDependencies = (config, generatorTypes) => __awaiter(void 0, void 0, vo
             case (0, utils_js_1.isFileType)(filename, constants_js_1.FileTypes.javascript): {
                 core.info(`Found ${filename}, copying dependencies`);
                 const deps = yield generate.javascript(Object.assign(Object.assign({}, config), { filename }));
-                packageJson.push(deps);
+                if (deps) {
+                    packageJson.push(deps);
+                }
                 break;
             }
             default:

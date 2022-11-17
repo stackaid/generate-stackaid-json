@@ -5,9 +5,15 @@ import { GITHUB_DOMAIN } from './constants.js';
 import { getClient } from './queries.js';
 const { uniqBy } = lodash;
 const getJavaScriptDependencies = async ({ octokit, owner, repo, filename, }) => {
-    const content = await getClient(octokit).getFileContents(owner, repo, filename);
-    const { dependencies, devDependencies } = JSON.parse(content);
-    return { filename, dependencies, devDependencies };
+    try {
+        const content = await getClient(octokit).getFileContents(owner, repo, filename);
+        const { dependencies, devDependencies } = JSON.parse(content);
+        return { filename, dependencies, devDependencies };
+    }
+    catch (error) {
+        // File may not exist or not be valid JSON
+        return null;
+    }
 };
 const getGoDependencies = async ({ owner, repo, filename, sourceDir, }) => {
     const parent = `https://${GITHUB_DOMAIN}/${owner}/${repo}`;

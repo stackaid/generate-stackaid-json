@@ -18,14 +18,18 @@ const getJavaScriptDependencies = async ({
   repo,
   filename,
 }: DependencyConfig) => {
-  const content = await getClient(octokit).getFileContents(
-    owner,
-    repo,
-    filename!
-  )
-  const { dependencies, devDependencies } = JSON.parse(content as string)
-
-  return { filename, dependencies, devDependencies } as PackageJson
+  try {
+    const content = await getClient(octokit).getFileContents(
+      owner,
+      repo,
+      filename!
+    )
+    const { dependencies, devDependencies } = JSON.parse(content as string)
+    return { filename, dependencies, devDependencies } as PackageJson
+  } catch (error) {
+    // File may not exist or not be valid JSON
+    return null
+  }
 }
 
 const getGoDependencies = async ({

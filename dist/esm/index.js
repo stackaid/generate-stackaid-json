@@ -22,7 +22,9 @@ export const getDependencies = async (config, generatorTypes) => {
             case isFileType(filename, FileTypes.javascript): {
                 core.info(`Found ${filename}, copying dependencies`);
                 const deps = await generate.javascript({ ...config, filename });
-                packageJson.push(deps);
+                if (deps) {
+                    packageJson.push(deps);
+                }
                 break;
             }
             default:
