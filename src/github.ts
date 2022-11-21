@@ -1,20 +1,23 @@
 import * as core from '@actions/core'
+import { FileAddition } from './types/graphql.js'
+import { Octokit } from 'octokit'
 import { context } from '@actions/github'
-import { FileAddition } from '../types/graphql'
-import { createCommit } from './queries'
-
-export const sourceDir = core.getInput('src_dir') || process.cwd()
+import { getClient } from './queries.js'
 
 export const isSamePublishRepo =
   core.getInput('publish_repo').toLowerCase() ===
   `${context.repo.owner.toLowerCase()}/${context.repo.repo.toLowerCase()}`
 
-export const publishFiles = async (message: string, files: FileAddition[]) => {
+export const publishFiles = async (
+  octokit: Octokit,
+  message: string,
+  files: FileAddition[]
+) => {
   const [publishOwner, publishRepo] = core
     .getInput('publish_repo')
-    .split('/', 2)
+    .split('/', 2) as [string, string]
 
-  await createCommit(publishOwner, publishRepo, {
+  await getClient(octokit).createCommit(publishOwner, publishRepo, {
     message: {
       headline: message,
       body: '',
@@ -32,8 +35,5 @@ export const addFileChange = (path: string, contents: string) => {
     path = `${publishPath}/${path}`
   }
 
-  return {
-    path,
-    contents: Buffer.from(contents).toString('base64'),
-  }
+  return { path, contents: Buffer.from(contents).toString('base64') }
 }

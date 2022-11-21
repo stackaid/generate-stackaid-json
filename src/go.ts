@@ -1,11 +1,10 @@
+import lodash from 'lodash'
 import path from 'path'
-import { GITHUB_DOMAIN } from './constants'
+import { GITHUB_DOMAIN } from './constants.js'
+import { StackAidDependency } from './types/index.js'
 import { execSync } from 'child_process'
-import { sourceDir } from './github'
-import { uniqBy } from 'lodash'
 
-const resolveDir = (dir: string) => path.resolve(sourceDir, dir)
-
+const { uniqBy } = lodash
 const filterDependency = (line: string) => line.startsWith(GITHUB_DOMAIN)
 
 const parseDependency = (line: string) => {
@@ -19,30 +18,30 @@ const parseDependency = (line: string) => {
 }
 
 const parseModuleUrl = (m: string) => {
-  const [url, version = ''] = m.split('@')
+  const [url, version = ''] = m.split('@') as [string, string]
   const [domain, owner, repo] = url.split('/')
 
   return { module: [domain, owner, repo].join('/'), version }
 }
 
-export const listDirectDeps = (dir: string) => {
+export const listDirectDeps = (dir: string, sourceDir: string) => {
   let output = execSync(
     `go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`,
-    { cwd: resolveDir(dir) }
+    { cwd: path.resolve(sourceDir, dir) }
   ).toString()
 
   return output
     .split('\n')
     .map((d) => {
-      const [module, version = ''] = d.split(' ')
+      const [module, version = ''] = d.split(' ') as [string]
       return { module, version }
     })
     .filter((entry) => filterDependency(entry.module))
 }
 
-export const getModuleGraph = (dir: string) => {
+export const getModuleGraph = (dir: string, sourceDir: string) => {
   const output = execSync(`go mod graph`, {
-    cwd: resolveDir(dir),
+    cwd: path.resolve(sourceDir, dir),
   }).toString()
 
   const graph: Record<string, { module: string; version: string }[]> = {}
@@ -52,7 +51,7 @@ export const getModuleGraph = (dir: string) => {
       return
     }
 
-    const [parent, child] = line.split(' ')
+    const [parent, child] = line.split(' ') as [string, string]
     const mod = parseModuleUrl(parent)
     const childMod = parseModuleUrl(child)
 
@@ -60,7 +59,7 @@ export const getModuleGraph = (dir: string) => {
     graph[key] = graph[key] || []
 
     if (childMod.module !== key) {
-      graph[key].push(childMod)
+      graph[key]!.push(childMod)
     }
   })
 
@@ -71,9 +70,12 @@ export const getModuleGraph = (dir: string) => {
   return graph
 }
 
-export const getDependencies = (dir: string = '') => {
-  const graph = getModuleGraph(dir)
-  const direct = listDirectDeps(dir)
+export const getDependencies = (
+  dir: string = '',
+  sourceDir: string = process.cwd()
+) => {
+  const graph = getModuleGraph(dir, sourceDir)
+  const direct = listDirectDeps(dir, sourceDir)
 
   let dependencies = direct
     .filter((d) => filterDependency(d.module))

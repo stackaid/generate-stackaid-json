@@ -110,3 +110,7 @@ lib
 .DS_Store
 
 schema.graphql
+
+# Irrelavant output from ncc compilation
+dist/action
+!dist/action/!index.js
