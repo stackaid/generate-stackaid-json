@@ -91,8 +91,9 @@ export const getClient = (octokit: Octokit) => {
       repo: string,
       cursor: string = ''
     ) {
-      const result = (await this.graphql(
-        `
+      try {
+        const result = (await this.graphql(
+          `
           query getRepositorySummary(
             $owner: String!
             $repo: String!
@@ -111,14 +112,19 @@ export const getClient = (octokit: Octokit) => {
           }
           ${print(summaryFragment)}
         `,
-        { repo, owner, cursor } as GetRepositorySummaryQueryVariables
-      )) as GetRepositorySummaryQuery
+          { repo, owner, cursor } as GetRepositorySummaryQueryVariables
+        )) as GetRepositorySummaryQuery
 
-      const {
-        dependencyGraphManifests: { edges },
-      } = result.repository
+        const {
+          dependencyGraphManifests: { edges },
+        } = result.repository
 
-      return edges
+        return edges
+      } catch (e) {
+        // Typically happens when repo cannot be found
+        console.log(e)
+        return []
+      }
     },
 
     async getRepositorySummary(owner: string, repo: string, glob: string = '') {

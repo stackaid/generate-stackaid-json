@@ -65,7 +65,8 @@ export const getClient = (octokit) => {
             return Buffer.from(encodedContent, 'base64').toString();
         },
         async getRepositorySummaryPage(owner, repo, cursor = '') {
-            const result = (await this.graphql(`
+            try {
+                const result = (await this.graphql(`
           query getRepositorySummary(
             $owner: String!
             $repo: String!
@@ -84,8 +85,14 @@ export const getClient = (octokit) => {
           }
           ${print(summaryFragment)}
         `, { repo, owner, cursor }));
-            const { dependencyGraphManifests: { edges }, } = result.repository;
-            return edges;
+                const { dependencyGraphManifests: { edges }, } = result.repository;
+                return edges;
+            }
+            catch (e) {
+                // Typically happens when repo cannot be found
+                console.log(e);
+                return [];
+            }
         },
         async getRepositorySummary(owner, repo, glob = '') {
             let edges = await this.getRepositorySummaryPage(owner, repo);

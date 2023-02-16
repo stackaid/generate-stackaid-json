@@ -19,7 +19,7 @@ const parseModuleUrl = (m) => {
     return { module: [domain, owner, repo].join('/'), version };
 };
 export const listDirectDeps = (dir, sourceDir) => {
-    let output = execSync(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: path.resolve(sourceDir, dir) }).toString();
+    let output = execSync(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: path.resolve(sourceDir, dir), maxBuffer: 1024 * 1024 * 10 }).toString();
     return output
         .split('\n')
         .map((d) => {
@@ -31,6 +31,7 @@ export const listDirectDeps = (dir, sourceDir) => {
 export const getModuleGraph = (dir, sourceDir) => {
     const output = execSync(`go mod graph`, {
         cwd: path.resolve(sourceDir, dir),
+        maxBuffer: 1024 * 1024 * 10,
     }).toString();
     const graph = {};
     output.split('\n').forEach((line) => {

@@ -80,7 +80,8 @@ const getClient = (octokit) => {
         },
         getRepositorySummaryPage(owner, repo, cursor = '') {
             return __awaiter(this, void 0, void 0, function* () {
-                const result = (yield this.graphql(`
+                try {
+                    const result = (yield this.graphql(`
           query getRepositorySummary(
             $owner: String!
             $repo: String!
@@ -99,8 +100,14 @@ const getClient = (octokit) => {
           }
           ${(0, graphql_1.print)(exports.summaryFragment)}
         `, { repo, owner, cursor }));
-                const { dependencyGraphManifests: { edges }, } = result.repository;
-                return edges;
+                    const { dependencyGraphManifests: { edges }, } = result.repository;
+                    return edges;
+                }
+                catch (e) {
+                    // Typically happens when repo cannot be found
+                    console.log(e);
+                    return [];
+                }
             });
         },
         getRepositorySummary(owner, repo, glob = '') {

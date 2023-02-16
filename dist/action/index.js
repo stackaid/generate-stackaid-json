@@ -70710,7 +70710,8 @@ const getClient = (octokit) => {
             return Buffer.from(encodedContent, 'base64').toString();
         },
         async getRepositorySummaryPage(owner, repo, cursor = '') {
-            const result = (await this.graphql(`
+            try {
+                const result = (await this.graphql(`
           query getRepositorySummary(
             $owner: String!
             $repo: String!
@@ -70729,8 +70730,14 @@ const getClient = (octokit) => {
           }
           ${(0,graphql.print)(summaryFragment)}
         `, { repo, owner, cursor }));
-            const { dependencyGraphManifests: { edges }, } = result.repository;
-            return edges;
+                const { dependencyGraphManifests: { edges }, } = result.repository;
+                return edges;
+            }
+            catch (e) {
+                // Typically happens when repo cannot be found
+                console.log(e);
+                return [];
+            }
         },
         async getRepositorySummary(owner, repo, glob = '') {
             let edges = await this.getRepositorySummaryPage(owner, repo);
@@ -70884,7 +70891,7 @@ const parseModuleUrl = (m) => {
     return { module: [domain, owner, repo].join('/'), version };
 };
 const listDirectDeps = (dir, sourceDir) => {
-    let output = (0,external_child_process_namespaceObject.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: external_path_default().resolve(sourceDir, dir) }).toString();
+    let output = (0,external_child_process_namespaceObject.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: external_path_default().resolve(sourceDir, dir), maxBuffer: 1024 * 1024 * 10 }).toString();
     return output
         .split('\n')
         .map((d) => {
@@ -70896,6 +70903,7 @@ const listDirectDeps = (dir, sourceDir) => {
 const getModuleGraph = (dir, sourceDir) => {
     const output = (0,external_child_process_namespaceObject.execSync)(`go mod graph`, {
         cwd: external_path_default().resolve(sourceDir, dir),
+        maxBuffer: 1024 * 1024 * 10,
     }).toString();
     const graph = {};
     output.split('\n').forEach((line) => {

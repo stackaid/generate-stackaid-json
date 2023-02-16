@@ -27,7 +27,7 @@ const parseModuleUrl = (m: string) => {
 export const listDirectDeps = (dir: string, sourceDir: string) => {
   let output = execSync(
     `go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`,
-    { cwd: path.resolve(sourceDir, dir) }
+    { cwd: path.resolve(sourceDir, dir), maxBuffer: 1024 * 1024 * 10 }
   ).toString()
 
   return output
@@ -42,6 +42,7 @@ export const listDirectDeps = (dir: string, sourceDir: string) => {
 export const getModuleGraph = (dir: string, sourceDir: string) => {
   const output = execSync(`go mod graph`, {
     cwd: path.resolve(sourceDir, dir),
+    maxBuffer: 1024 * 1024 * 10,
   }).toString()
 
   const graph: Record<string, { module: string; version: string }[]> = {}
