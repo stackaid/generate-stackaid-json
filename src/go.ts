@@ -25,10 +25,17 @@ const parseModuleUrl = (m: string) => {
 }
 
 export const listDirectDeps = (dir: string, sourceDir: string) => {
-  let output = execSync(
-    `go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`,
-    { cwd: path.resolve(sourceDir, dir), maxBuffer: 1024 * 1024 * 10 }
-  ).toString()
+  let output: string = ''
+  try {
+    output = execSync(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, {
+      cwd: path.resolve(sourceDir, dir),
+      maxBuffer: 1024 * 1024 * 10,
+    }).toString()
+  } catch (e) {
+    // Mostly likely the path does not exist
+    console.log('Unable to run go list at path: ', dir)
+    console.error(e)
+  }
 
   return output
     .split('\n')
@@ -40,10 +47,17 @@ export const listDirectDeps = (dir: string, sourceDir: string) => {
 }
 
 export const getModuleGraph = (dir: string, sourceDir: string) => {
-  const output = execSync(`go mod graph`, {
-    cwd: path.resolve(sourceDir, dir),
-    maxBuffer: 1024 * 1024 * 10,
-  }).toString()
+  let output: string = ''
+  try {
+    output = execSync(`go mod graph`, {
+      cwd: path.resolve(sourceDir, dir),
+      maxBuffer: 1024 * 1024 * 10,
+    }).toString()
+  } catch (e) {
+    // Mostly likely the path does not exist
+    console.log('Unable to run go mod graph at path: ', dir)
+    console.error(e)
+  }
 
   const graph: Record<string, { module: string; version: string }[]> = {}
 

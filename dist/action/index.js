@@ -70891,7 +70891,18 @@ const parseModuleUrl = (m) => {
     return { module: [domain, owner, repo].join('/'), version };
 };
 const listDirectDeps = (dir, sourceDir) => {
-    let output = (0,external_child_process_namespaceObject.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, { cwd: external_path_default().resolve(sourceDir, dir), maxBuffer: 1024 * 1024 * 10 }).toString();
+    let output = '';
+    try {
+        output = (0,external_child_process_namespaceObject.execSync)(`go list -f '{{if not .Indirect}}{{.}}{{end}}' -m all`, {
+            cwd: external_path_default().resolve(sourceDir, dir),
+            maxBuffer: 1024 * 1024 * 10,
+        }).toString();
+    }
+    catch (e) {
+        // Mostly likely the path does not exist
+        console.log('Unable to run go list at path: ', dir);
+        console.error(e);
+    }
     return output
         .split('\n')
         .map((d) => {
@@ -70901,10 +70912,18 @@ const listDirectDeps = (dir, sourceDir) => {
         .filter((entry) => filterDependency(entry.module));
 };
 const getModuleGraph = (dir, sourceDir) => {
-    const output = (0,external_child_process_namespaceObject.execSync)(`go mod graph`, {
-        cwd: external_path_default().resolve(sourceDir, dir),
-        maxBuffer: 1024 * 1024 * 10,
-    }).toString();
+    let output = '';
+    try {
+        output = (0,external_child_process_namespaceObject.execSync)(`go mod graph`, {
+            cwd: external_path_default().resolve(sourceDir, dir),
+            maxBuffer: 1024 * 1024 * 10,
+        }).toString();
+    }
+    catch (e) {
+        // Mostly likely the path does not exist
+        console.log('Unable to run go mod graph at path: ', dir);
+        console.error(e);
+    }
     const graph = {};
     output.split('\n').forEach((line) => {
         if (!line) {

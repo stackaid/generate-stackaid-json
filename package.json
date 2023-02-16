@@ -1,6 +1,6 @@
 {
   "name": "@stackaid/stackaid-json-generator",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "private": false,
   "description": "Generate a stackaid.json file based on your repository's dependency graph",
   "scripts": {
